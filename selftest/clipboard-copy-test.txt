@@ -1,0 +1,7 @@
+before first  t=1429 seq=774
+after first   t=1535 seq=779
+clipboard     The student wrote the lesson at school this morning.
+before second t=1655 seq=779
+after second  t=1705 seq=779
+clipboard     The student wrote the lesson at school this morning.
+after settle  t=1915 seq=779

@@ -1,0 +1,15 @@
+ok health
+ok languages
+ok html
+ok auth_required
+ok translate
+translation={"translation":"No way, dude.","detected":"es","target":"en","engine":"phrasebook"}
+ok study_add
+ok study_list
+ok study_grade
+grade={"card":{"source":"No mames, güey.","translation":"No way, dude.","detected":"es","target":"en","due":"2026-11-02T14:49:08.8899562-08:00","intervalDays":1,"repetitions":1,"lapses":0,"ease":2.5},"stats":{"total":1,"due":0,"newCards":0,"reviewedToday":1,"nextDue":"2026-11-02T22:49:08.8890000Z"}}
+ok manifest
+ok windows_download
+package_bytes=8610989
+
+mobile test report: C:\Users\jfong\F-Recovered\Projects\REA\.freebuff\scratch\qalam\selftest\context\installed-mobiletest.txt

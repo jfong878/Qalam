@@ -1,0 +1,11 @@
+appdir=C:\Users\jfong\F-Recovered\Projects\REA\.freebuff\scratch\qalam\dist
+script=C:\Users\jfong\F-Recovered\Projects\REA\.freebuff\scratch\qalam\tashkeel\tashkeel_server.py exists=True
+python=python.exe exists=False
+FAIL: System.InvalidOperationException: Tashkeel failed: Traceback (most recent call last):
+  File "C:\Users\jfong\F-Recovered\Projects\REA\.freebuff\scratch\qalam\tashkeel\tashkeel_server.py", line 114, in main
+    raise RuntimeError("mishkal import failed: %s" % mishkal_error)
+RuntimeError: mishkal import failed: No module named 'mishkal'
+
+   at Qalam.TashkeelClient.TextCommand(String command, String text, String name)
+   at Qalam.SelfTest.Run(String[] args)
+

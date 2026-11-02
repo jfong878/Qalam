@@ -1,0 +1,102 @@
+{
+ "Pages": 1,
+ "Blocks": [
+  {
+   "Id": "p0b0",
+   "Page": 0,
+   "Bbox": [
+    320.94,
+    82.55,
+    533.999,
+    124.29
+   ],
+   "Text": "ﻛﺗﺏ ﺍﻟﻁﺎﻟﺏ ﺍﻟﺩﺭﺱ ﻓﻲ ﺍﻟﻣﺩﺭﺳﺔ ﻫﺫﺍ ﺍﻟﺻﺑﺎﺡ. ﻫﺫﻩ ﻓﻘﺭﺓ ﻋﺭﺑﻳﺔ ﻁﻭﻳﻠﺔ ﻻﺧﺗﺑﺎﺭ ﺍﻟﺗﺭﺟﻣﺔ.",
+   "Size": 15.0,
+   "Color": "203040",
+   "Font": "ArialMT",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Rtl": true,
+   "PageWidth": 595.0,
+   "Align": "right",
+   "LineHeight": 17.25,
+   "SourceBboxes": [
+    [
+     320.94,
+     82.55,
+     533.999,
+     99.29
+    ],
+    [
+     346.527,
+     107.55,
+     533.997,
+     124.29
+    ]
+   ]
+  },
+  {
+   "Id": "p0b2",
+   "Page": 0,
+   "Bbox": [
+    60.0,
+    165.0,
+    92.004,
+    177.366
+   ],
+   "Text": "COLOR",
+   "Size": 9.0,
+   "Color": "334d66",
+   "Font": "Helvetica",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Rtl": false,
+   "PageWidth": 595.0,
+   "Align": "left",
+   "LineHeight": 12.37,
+   "SourceBboxes": [
+    [
+     60.0,
+     165.0,
+     92.004,
+     177.366
+    ]
+   ]
+  },
+  {
+   "Id": "p0b3",
+   "Page": 0,
+   "Bbox": [
+    60.0,
+    790.0,
+    180.051,
+    802.366
+   ],
+   "Text": "Qalam layout sample - page 2",
+   "Size": 9.0,
+   "Color": "666666",
+   "Font": "Helvetica",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Rtl": false,
+   "PageWidth": 595.0,
+   "Align": "left",
+   "LineHeight": 12.37,
+   "SourceBboxes": [
+    [
+     60.0,
+     790.0,
+     180.051,
+     802.366
+    ]
+   ]
+  }
+ ],
+ "Warnings": []
+}

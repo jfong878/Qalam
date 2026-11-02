@@ -1,0 +1,107 @@
+Qalam online vs offline translation comparison
+endpoint=http://127.0.0.1:11434
+model=auto
+cases=17
+
+standard-1 en->ar [standard]
+  source:  The student wrote the lesson at school this morning.
+  ref:     كتب الطالب الدرس في المدرسة هذا الصباح.
+  online:  كتب الطالب الدرس في المدرسة هذا الصباح.  f1=1.00  709ms
+  offline: الطالب كتب الدروس في المدرسة هذا الصباح.  f1=0.86  6310ms
+
+standard-2 ar->en [standard]
+  source:  كتب الطالب الدرس في المدرسة هذا الصباح.
+  ref:     The student wrote the lesson at school this morning.
+  online:  The student wrote the lesson at school this morning.  f1=1.00  89ms
+  offline: The student did his homework at school this morning.  f1=0.67  5070ms
+
+standard-3 es->en [standard]
+  source:  El estudiante escribió la lección en la escuela esta mañana.
+  ref:     The student wrote the lesson at school this morning.
+  online:  The student wrote the lesson at school this morning.  f1=1.00  70ms
+  offline: The student wrote the lesson at school this morning.  f1=1.00  5137ms
+
+standard-4 en->es [standard]
+  source:  The student wrote the lesson at school this morning.
+  ref:     El estudiante escribió la lección en la escuela esta mañana.
+  online:  El estudiante escribió la lección en la escuela esta mañana.  f1=1.00  72ms
+  offline: El estudiante escribió la lección en el colegio esta mañana.  f1=0.80  5745ms
+
+standard-5 en->ar [standard]
+  source:  I will call you tomorrow after work.
+  ref:     سأتصل بك غدًا بعد العمل.
+  online:  سأتصل بك غدا بعد العمل.  f1=1.00  132ms
+  offline: سأُخبرك غداً بعد العمل.  f1=0.67  2994ms
+
+standard-6 en->ar [standard]
+  source:  Please close the window before you leave.
+  ref:     يرجى إغلاق النافذة قبل أن تغادر.
+  online:  يرجى إغلاق النافذة قبل أن تغادر.  f1=1.00  72ms
+  offline: يرجى إغلاق الفتحة قبل مغادرتك.  f1=0.55  3965ms
+
+standard-7 ar->en [standard]
+  source:  أحتاج إلى شراء بعض الخبز من السوق.
+  ref:     I need to buy some bread from the market.
+  online:  I need to buy some bread from the market.  f1=1.00  64ms
+  offline: I need to buy some bread from the market.  f1=1.00  3135ms
+
+standard-8 en->es [standard]
+  source:  It's raining, so take an umbrella.
+  ref:     Está lloviendo, así que lleva un paraguas.
+  online:  Está lloviendo, así que llévate un paraguas.  f1=0.86  65ms
+  offline: Está lloviendo, así que lleva un paraguas.  f1=1.00  4352ms
+
+standard-9 en->ar [standard]
+  source:  The meeting starts at nine in the morning.
+  ref:     يبدأ الاجتماع في التاسعة صباحًا.
+  online:  يبدأ اللقاء في الساعة التاسعة صباحا.  f1=0.73  62ms
+  offline: الاجتماع يبدأ في الساعة التاسعة صباحاً.  f1=0.91  3525ms
+
+slang-1 es->en [slang]
+  source:  No mames, ese cabrón me robó el chingado lugar.
+  ref:     No way, that bastard stole my fucking spot.
+  online:  No, that bastard stole my fucking place.  f1=0.80  76ms
+  offline: No way, that bastard took my fucking place.  f1=0.75  5286ms
+
+slang-2 en->ar [slang]
+  source:  Shut the fuck up, don't fuck with me.
+  ref:     اخرس، لا تلعب معي.
+  online:  اخرس، لا تلعب معي.  f1=1.00  1ms
+  offline: اخرس، لا تلعب معي.  f1=1.00  6ms
+
+slang-3 es->en [slang]
+  source:  ¡No manches, qué caro!
+  ref:     No way, that's expensive!
+  online:  No way, that's expensive!  f1=1.00  12ms
+  offline: No way, that's expensive!  f1=1.00  10ms
+
+slang-4 es->en [slang]
+  source:  Ese güey es bien chido.
+  ref:     That dude is really cool.
+  online:  That guy is really cool.  f1=0.80  54ms
+  offline: That dude is really cool.  f1=1.00  3109ms
+
+dialect-1 ar->en [dialect]
+  source:  شو أخبارك اليوم؟
+  ref:     How are you today?
+  online:  What's up with you today?  f1=0.40  68ms
+  offline: How are you doing today?  f1=0.89  2244ms
+
+dialect-2 ar->en [dialect]
+  source:  إيه ده؟
+  ref:     What's this?
+  online:  What's this?  f1=1.00  1ms
+  offline: What's this?  f1=1.00  9ms
+
+dialect-3 ar->en [dialect]
+  source:  وين رايح؟
+  ref:     Where are you going?
+  online:  Where are you going?  f1=1.00  0ms
+  offline: Where are you going?  f1=1.00  6ms
+
+dialect-4 ar->en [dialect]
+  source:  معلش، حصل خير.
+  ref:     Never mind, it turned out fine.
+  online:  Never mind, it turned out fine.  f1=1.00  5ms
+  offline: Never mind, it turned out fine.  f1=1.00  3ms
+

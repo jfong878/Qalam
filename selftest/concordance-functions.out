@@ -1,0 +1,23 @@
+concordance: corpus=Fixture subtitles from=es to=en read=6 accepted=6 written=6 truncated=False ms=22
+concordance: C:\Users\jfong\F-Recovered\Projects\REA\.freebuff\scratch\qalam\selftest\concordance-functions\packs\es-en.tsv
+concordance: C:\Users\jfong\F-Recovered\Projects\REA\.freebuff\scratch\qalam\selftest\concordance-functions\packs\en-es.tsv
+concordance: corpus=Fixture subtitles from=ar to=en read=6 accepted=6 written=6 truncated=False ms=6
+concordance: C:\Users\jfong\F-Recovered\Projects\REA\.freebuff\scratch\qalam\selftest\concordance-functions\packs\ar-en.tsv
+concordance: C:\Users\jfong\F-Recovered\Projects\REA\.freebuff\scratch\qalam\selftest\concordance-functions\packs\en-ar.tsv
+build_es_en=0
+build_ar_en=0
+packs=4 pairs=24
+ok exact_phrase
+  Calla chingada, no mames con mamar. => Shut the fuck up, don't come at me with that bullshit.
+ok slang_phrase
+  Calla chingada, no mames con mamar. => Shut the fuck up, don't come at me with that bullshit.
+ok vocalized_arabic
+  ???? ?? ????? => How are you, boss?
+ok arabic_prefix_book
+ok arabic_prefix_school
+ok reverse_pack
+ok missing_returns_none
+ok hint_ranks_relevant
+  hint: Calla chingada, no mames con mamar.
+
+concordance test report: C:\Users\jfong\F-Recovered\Projects\REA\.freebuff\scratch\qalam\selftest\concordance-functions\concordancetest.log

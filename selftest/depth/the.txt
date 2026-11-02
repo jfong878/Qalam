@@ -1,0 +1,11 @@
+query=the
+from=en to=es
+packs=3 pairs=550426
+OpenSubtitles v2024 (sampled): The shop. I .. => Iré a la tienda.
+OpenSubtitles v2024 (sampled): The show, uh ‒ => El espectáculo...
+OpenSubtitles v2024 (sampled): # yes the women => Sí, las mujeres.
+OpenSubtitles v2024 (sampled): By the deep 16. => Profundidad 16.
+OpenSubtitles v2024 (sampled): I lost the bet! => ¡He perdido la apuesta!
+OpenSubtitles v2024 (sampled): I love the man. => Amo al hombre.
+OpenSubtitles v2024 (sampled): Not at the inn. => En la posada no.
+OpenSubtitles v2024 (sampled): The heir is me. => El heredero soy yo.

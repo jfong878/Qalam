@@ -1,0 +1,8 @@
+good1 interval=1 reps=1 due=2026-11-02T12:00:00
+good2 interval=3 reps=2
+easy interval=10 reps=3 ease=2.65
+again interval=0 reps=0 lapses=1 due=2026-11-15T12:10:00
+store added=1 duplicate=0 cards=1
+store interval=1 persisted=1
+rendered=C:\Users\jfong\F-Recovered\Projects\REA\.freebuff\scratch\qalam\selftest\installed\study-window.png
+

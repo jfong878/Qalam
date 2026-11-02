@@ -1,0 +1,10 @@
+data=C:\Users\jfong\AppData\Local\Qalam\data\characters.tsv
+count=27321
+hao=好 pinyin=hǎo radical=38女 extra=3 strokes=6 trad= simp= def=good, excellent, fine; well
+xue=學 pinyin=xué radical=39子 extra=13 strokes=16 trad= simp=学 def=learning, knowledge; school
+ai=爱 pinyin=ài radical=87爪 extra=6 strokes=10 trad=愛 simp= def=love, be fond of, like
+chang=长 pinyin=zhǎng radical=168長 extra=0 strokes=4 trad=長 simp= def=long; length; excel in; leader
+text_chars=4
+stroke_count=6
+rendered=C:\Users\jfong\F-Recovered\Projects\REA\.freebuff\scratch\qalam\selftest\chars\character-stroke-hao.png
+rendered=C:\Users\jfong\F-Recovered\Projects\REA\.freebuff\scratch\qalam\selftest\chars\character-window.png

@@ -1,0 +1,146 @@
+{
+ "Pages": 2,
+ "Blocks": [
+  {
+   "Id": "p0b1",
+   "Page": 0,
+   "Bbox": [
+    60.0,
+    58.5,
+    456.88,
+    85.98
+   ],
+   "Text": "A longer document heading for layout testing",
+   "Size": 20.0,
+   "Color": "1f334d",
+   "Font": "Helvetica",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Align": "left",
+   "LineHeight": 27.48
+  },
+  {
+   "Id": "p0b2",
+   "Page": 0,
+   "Bbox": [
+    60.0,
+    103.175,
+    596.8,
+    118.289
+   ],
+   "Text": "This paragraph is deliberately long so the translated text has to wrap inside the same block without moving the",
+   "Size": 11.0,
+   "Color": "404040",
+   "Font": "Helvetica",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Align": "left",
+   "LineHeight": 15.11
+  },
+  {
+   "Id": "p0b3",
+   "Page": 0,
+   "Bbox": [
+    60.0,
+    138.175,
+    109.522,
+    153.289
+   ],
+   "Text": "Short line.",
+   "Size": 11.0,
+   "Color": "731a1a",
+   "Font": "Helvetica",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Align": "left",
+   "LineHeight": 15.11
+  },
+  {
+   "Id": "p0b4",
+   "Page": 0,
+   "Bbox": [
+    60.0,
+    173.175,
+    149.265,
+    188.289
+   ],
+   "Text": "Right-aligned note",
+   "Size": 11.0,
+   "Color": "1a4d80",
+   "Font": "Helvetica",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Align": "left",
+   "LineHeight": 15.11
+  },
+  {
+   "Id": "p1b0",
+   "Page": 1,
+   "Bbox": [
+    72.66,
+    82.425,
+    533.999,
+    99.165
+   ],
+   "Text": "ﻛﺗﺏ ﺍﻟﻁﺎﻟﺏ ﺍﻟﺩﺭﺱ ﻓﻲ ﺍﻟﻣﺩﺭﺳﺔ ﻫﺫﺍ ﺍﻟﺻﺑﺎﺡ. ﻫﺫﻩ ﻓﻘﺭﺓ ﻋﺭﺑﻳﺔ ﻁﻭﻳﻠﺔ ﻻﺧﺗﺑﺎﺭ ﺍﺗﺟﺎﻩ ﺍﻟﻧﺹ ﻭﺍﻟﺗﻧﺳﻳﻖ",
+   "Size": 15.0,
+   "Color": "203040",
+   "Font": "ArialMT",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Align": "center",
+   "LineHeight": 17.25
+  },
+  {
+   "Id": "p1b1",
+   "Page": 1,
+   "Bbox": [
+    404.593,
+    103.425,
+    533.998,
+    120.165
+   ],
+   "Text": "ﺑﻌﺩ ﺍﻟﺗﺭﺟﻣﺔ ﺇﻟﻰ ﺍﻹﻧﺟﻠﻳﺯﻳﺔ.",
+   "Size": 15.0,
+   "Color": "203040",
+   "Font": "ArialMT",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Align": "right",
+   "LineHeight": 17.25
+  },
+  {
+   "Id": "p1b2",
+   "Page": 1,
+   "Bbox": [
+    60.0,
+    200.325,
+    152.547,
+    212.691
+   ],
+   "Text": "Page two footer source",
+   "Size": 9.0,
+   "Color": "666666",
+   "Font": "Helvetica",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Align": "left",
+   "LineHeight": 12.37
+  }
+ ],
+ "Warnings": []
+}

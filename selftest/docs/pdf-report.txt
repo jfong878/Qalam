@@ -1,0 +1,17 @@
+input=.\selftest\docs\sample-en.pdf
+output=.\selftest\docs\sample-en-ar.pdf
+source=en
+target=ar
+progress=25% 1 of 4 text blocks
+progress=50% 2 of 4 text blocks
+progress=75% 3 of 4 text blocks
+progress=100% 4 of 4 text blocks
+progress=100% Restoring text into the original page layout
+progress=100% 4 text blocks written
+translated=4
+units=4
+pages=1
+skipped=0
+warnings=0
+elapsed_ms=4880
+exists=True

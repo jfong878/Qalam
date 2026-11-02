@@ -1,0 +1,3 @@
+query=no mames
+from=es to=en
+packs=3 pairs=550038

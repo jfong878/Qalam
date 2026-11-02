@@ -1,0 +1,126 @@
+{
+ "Pages": 1,
+ "Blocks": [
+  {
+   "Id": "p0b0",
+   "Page": 0,
+   "Bbox": [
+    60.0,
+    56.35,
+    346.088,
+    86.578
+   ],
+   "Text": "Qalam Document Translation",
+   "Size": 22.0,
+   "Color": "1a2640",
+   "Font": "Helvetica",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Rtl": false,
+   "PageWidth": 595.0,
+   "Align": "left",
+   "LineHeight": 30.23,
+   "SourceBboxes": [
+    [
+     60.0,
+     56.35,
+     346.088,
+     86.578
+    ]
+   ]
+  },
+  {
+   "Id": "p0b1",
+   "Page": 0,
+   "Bbox": [
+    60.0,
+    102.1,
+    460.836,
+    118.588
+   ],
+   "Text": "This sample tests whether translated text keeps its position, size, and color.",
+   "Size": 12.0,
+   "Color": "333333",
+   "Font": "Helvetica",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Rtl": false,
+   "PageWidth": 595.0,
+   "Align": "left",
+   "LineHeight": 16.49,
+   "SourceBboxes": [
+    [
+     60.0,
+     102.1,
+     460.836,
+     118.588
+    ]
+   ]
+  },
+  {
+   "Id": "p0b2",
+   "Page": 0,
+   "Bbox": [
+    60.0,
+    132.1,
+    337.464,
+    148.588
+   ],
+   "Text": "The student wrote the lesson at school this morning.",
+   "Size": 12.0,
+   "Color": "1a4d99",
+   "Font": "Helvetica",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Rtl": false,
+   "PageWidth": 595.0,
+   "Align": "left",
+   "LineHeight": 16.49,
+   "SourceBboxes": [
+    [
+     60.0,
+     132.1,
+     337.464,
+     148.588
+    ]
+   ]
+  },
+  {
+   "Id": "p0b3",
+   "Page": 0,
+   "Bbox": [
+    60.0,
+    162.1,
+    461.52,
+    178.588
+   ],
+   "Text": "A second paragraph with a little more text to fill the block and test wrapping.",
+   "Size": 12.0,
+   "Color": "661a1a",
+   "Font": "Helvetica",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Rtl": false,
+   "PageWidth": 595.0,
+   "Align": "left",
+   "LineHeight": 16.49,
+   "SourceBboxes": [
+    [
+     60.0,
+     162.1,
+     461.52,
+     178.588
+    ]
+   ]
+  }
+ ],
+ "Warnings": []
+}

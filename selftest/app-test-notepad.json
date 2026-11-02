@@ -1,0 +1,13 @@
+﻿{
+    "app":  "notepad",
+    "status":  "failed",
+    "timestamp":  "2026-10-31T23:48:25.1627050-07:00",
+    "details":  {
+                    "token":  "qalam-notepad-627c18fd",
+                    "expected":  "Qalam Notepad selection capture test qalam-notepad-627c18fd.",
+                    "expected_chars":  60,
+                    "window_found":  false,
+                    "accepted":  false,
+                    "error":  "Notepad is already running; skipped so existing user tabs are not touched."
+                }
+}

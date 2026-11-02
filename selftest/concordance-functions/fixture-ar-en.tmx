@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<tmx version="1.4"><header srclang="ar" adminlang="en" segtype="sentence" creationtool="Qalam test" datatype="PlainText" /><body>
+  <tu><tuv xml:lang="ar"><seg>إزيك يا باشا؟</seg></tuv><tuv xml:lang="en"><seg>How are you, boss?</seg></tuv></tu>
+  <tu><tuv xml:lang="ar"><seg>إِزِيك، عامل إيه؟</seg></tuv><tuv xml:lang="en"><seg>How are you, what's up?</seg></tuv></tu>
+  <tu><tuv xml:lang="ar"><seg>كتب الطالب الدرس.</seg></tuv><tuv xml:lang="en"><seg>The student wrote the lesson.</seg></tuv></tu>
+  <tu><tuv xml:lang="ar"><seg>الكتاب على الطاولة.</seg></tuv><tuv xml:lang="en"><seg>The book is on the table.</seg></tuv></tu>
+  <tu><tuv xml:lang="ar"><seg>ذهبت إلى المدرسة.</seg></tuv><tuv xml:lang="en"><seg>I went to school.</seg></tuv></tu>
+  <tu><tuv xml:lang="ar"><seg>مش فارقة.</seg></tuv><tuv xml:lang="en"><seg>It doesn't matter.</seg></tuv></tu>
+</body></tmx>

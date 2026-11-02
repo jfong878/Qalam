@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Qalam Context — translate with local examples, study the words, and keep everything on your machine.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qalam Context">
+  <title>Qalam Context — Translate with context</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.webmanifest?token=__TOKEN__">
+  <script>
+    (function () {
+      try {
+        var choice = localStorage.getItem("qalam.theme") || "system";
+        var dark = choice === "dark" || (choice === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : (choice === "sepia" ? "sepia" : "light");
+      } catch (error) { }
+    })();
+  </script>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/?token=__TOKEN__" aria-label="Qalam Context home">
+        <span class="mark" aria-hidden="true">ق</span>
+        <span class="brand-copy">
+          <strong>Qalam</strong>
+          <small>Context</small>
+        </span>
+      </a>
+
+      <nav class="tabs" role="tablist" aria-label="Qalam sections">
+        <button class="tab active" type="button" data-tab="translate" role="tab" aria-selected="true" aria-controls="panel-translate">Translate</button>
+        <button class="tab" type="button" data-tab="study" role="tab" aria-selected="false" aria-controls="panel-study">Study</button>
+        <button class="tab" type="button" data-tab="corpus" role="tab" aria-selected="false" aria-controls="panel-corpus">Context</button>
+      </nav>
+
+      <div class="header-actions">
+        <select id="themeSelect" class="theme-select" aria-label="Theme" title="Theme: System follows your device">
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="sepia">Sepia</option>
+          <option value="dark">Dark</option>
+        </select>
+        <span class="connection" id="connection"><i></i><span>local</span></span>
+        <a class="download-pill" href="/download/windows?token=__TOKEN__" download="Qalam-Windows.zip">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v9m0 0 3.5-3.5M10 11 6.5 7.5M3 13.5V16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2.5"/></svg>
+          Download for Windows
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="app">
+    <div class="workspace">
+      <div class="primary">
+        <section class="panel active" id="panel-translate" role="tabpanel" aria-label="Translate">
+          <div class="hero">
+            <p class="eyebrow">QALAM CONTEXT</p>
+            <h1>Translate with <em>context.</em></h1>
+            <p class="hero-copy">Words make sense in sentences. Translate a phrase and see aligned examples from the local corpus, without an account or a cloud tab.</p>
+          </div>
+
+          <div class="search-card">
+            <div class="language-bar">
+              <div class="language-field">
+                <span class="field-label">From</span>
+                <div class="detected-language">Detect language <small>automatic</small></div>
+              </div>
+              <button class="swap" id="swapBtn" type="button" aria-label="Swap Arabic and English target" title="Swap Arabic and English target">⇄</button>
+              <div class="language-field target-field">
+                <label class="field-label" for="target">To</label>
+                <select id="target"></select>
+              </div>
+            </div>
+
+            <div class="source-box">
+              <textarea id="source" rows="5" maxlength="600" dir="auto" autocapitalize="sentences" spellcheck="false" placeholder="Type a word or phrase…"></textarea>
+            </div>
+
+            <div class="search-footer">
+              <span class="shortcut">Ctrl + Enter to translate</span>
+              <div class="search-actions">
+                <button class="ghost small" id="wordingBtn" type="button" title="Suggest more natural wording with the local model">Improve wording</button>
+                <button class="primary translate" id="translateBtn" type="button">Translate</button>
+              </div>
+            </div>
+            <p class="status" id="translateStatus" role="status" aria-live="polite"></p>
+
+            <div class="samples" aria-label="Example phrases">
+              <span>Try</span>
+              <button class="sample" type="button" data-text="No mames, güey.">No mames, güey.</button>
+              <button class="sample" type="button" data-text="شكراً جزيلاً">شكراً جزيلاً</button>
+              <button class="sample" type="button" data-text="The shop">The shop</button>
+            </div>
+          </div>
+
+          <article class="result-card hidden" id="result">
+            <div class="result-head">
+              <span class="eyebrow" id="pair"></span>
+              <button class="ghost small" id="copyBtn" type="button">Copy</button>
+            </div>
+            <p class="translation" id="translation" dir="auto"></p>
+            <div class="result-actions">
+              <button class="ghost small" id="speakBtn" type="button">Listen</button>
+              <button class="ghost small" id="addStudyBtn" type="button">Add to study</button>
+            </div>
+          </article>
+
+          <article class="result-card hidden" id="wordingCard">
+            <div class="result-head">
+              <span class="eyebrow">BETTER WORDING</span>
+              <button class="ghost small" id="useWordingBtn" type="button">Use this</button>
+            </div>
+            <p class="translation" id="wordingText" dir="auto"></p>
+            <p class="status" id="wordingStatus" role="status" aria-live="polite"></p>
+          </article>
+
+          <section class="context-panel hidden" id="contextPanel" aria-labelledby="contextTitle">
+            <div class="context-head">
+              <div>
+                <p class="eyebrow">IN CONTEXT</p>
+                <h2 id="contextTitle">How it is used</h2>
+              </div>
+              <button class="ghost small" id="moreContext" type="button">Search all context</button>
+            </div>
+            <div class="context-list" id="contextResults"></div>
+            <p class="status" id="contextStatus" role="status" aria-live="polite"></p>
+          </section>
+        </section>
+
+        <section class="panel" id="panel-study" role="tabpanel" aria-label="Study">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">SPACED REPETITION</p>
+              <h1>Keep the words you meet.</h1>
+              <p>Review saved translations while they are still fresh, then again when they are about to fade.</p>
+            </div>
+            <button class="ghost small" id="importBtn" type="button">Import saved</button>
+          </div>
+          <div class="stats" id="studyStats"></div>
+
+          <article class="study-card hidden" id="studyCard">
+            <div class="card-head">
+              <span class="eyebrow" id="studyPair"></span>
+              <span class="counter" id="studyCounter"></span>
+            </div>
+            <p class="study-front" id="studyFront" dir="auto"></p>
+            <div class="hidden" id="studyBackWrap">
+              <span class="eyebrow">BACK</span>
+              <p class="study-back" id="studyBack" dir="auto"></p>
+            </div>
+            <p class="status" id="studyStatus" role="status" aria-live="polite"></p>
+            <button class="primary" id="revealBtn" type="button">Reveal answer</button>
+            <div class="grades hidden" id="gradeRow">
+              <button type="button" data-grade="again">Again <span>1</span></button>
+              <button type="button" data-grade="hard">Hard <span>2</span></button>
+              <button type="button" data-grade="good">Good <span>3</span></button>
+              <button type="button" data-grade="easy">Easy <span>4</span></button>
+            </div>
+          </article>
+
+          <div class="empty" id="studyEmpty">
+            <p class="empty-title" id="studyEmptyTitle">No cards due</p>
+            <p id="studyEmptyBody">Save a translation to favorites, then import it here.</p>
+            <button class="ghost small hidden" id="reviewAhead" type="button">Review ahead</button>
+          </div>
+        </section>
+
+        <section class="panel" id="panel-corpus" role="tabpanel" aria-label="Context search">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">LOCAL CORPUS</p>
+              <h1>See the phrase in the wild.</h1>
+              <p>Search aligned sentences from the open corpus installed beside Qalam.</p>
+            </div>
+          </div>
+
+          <div class="corpus-search">
+            <div class="field">
+              <label for="corpusQuery">Words or phrase</label>
+              <input id="corpusQuery" type="search" dir="auto" placeholder="Try a word, idiom, or phrase" autocomplete="off">
+            </div>
+            <div class="corpus-row">
+              <div class="field"><label for="corpusFrom">From</label><select id="corpusFrom"></select></div>
+              <div class="field"><label for="corpusTo">To</label><select id="corpusTo"></select></div>
+              <button class="primary" id="corpusBtn" type="button">Search context</button>
+            </div>
+            <p class="status" id="corpusStatus" role="status" aria-live="polite"></p>
+          </div>
+          <div class="context-list" id="corpusResults"></div>
+        </section>
+      </div>
+
+      <aside class="rail">
+        <div class="windows-card">
+          <div class="win-top">
+            <span class="win-badge" aria-hidden="true">ق</span>
+            <span class="eyebrow">QALAM FOR WINDOWS</span>
+          </div>
+          <h2>Take the context with you.</h2>
+          <p>Highlight text, then press Ctrl + C + C anywhere. Translate, read the examples, and study — all from your desktop.</p>
+          <a class="download-main" href="/download/windows?token=__TOKEN__" download="Qalam-Windows.zip">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v9m0 0 3.5-3.5M10 11 6.5 7.5M3 13.5V16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2.5"/></svg>
+            Download for Windows
+          </a>
+          <p class="download-meta">Windows 10/11 · ZIP installer · core language packs included</p>
+          <button class="install-web hidden" id="installAppBtn" type="button">Install this web app</button>
+          <ul class="win-list">
+            <li>Local translation and study workspace</li>
+            <li>Offline Tashkeel and Chinese characters</li>
+            <li>No account, no cloud dependency</li>
+          </ul>
+        </div>
+
+        <div class="rail-note">
+          <span class="eyebrow">ON THIS NETWORK</span>
+          <p>This page is served by the Qalam desktop app. The same workspace is available on this computer and on your phone.</p>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="footer">
+      <span>Local only · <span id="languageCount">73</span> languages · no account</span>
+      <span><span id="version">Qalam Context</span> · <button class="footer-link" id="reportBugBtn" type="button" aria-haspopup="dialog">Report a bug</button></span>
+    </footer>
+  </div>
+
+  <div class="modal-backdrop hidden" id="reportModal" role="presentation">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
+      <button class="modal-close" id="reportCloseBtn" type="button" aria-label="Close bug report">×</button>
+      <p class="eyebrow">LOCAL DIAGNOSTICS</p>
+      <h2 id="reportTitle">Report a bug</h2>
+      <p class="modal-copy">Nothing is sent automatically. The report is saved on the Qalam computer so you can copy it or attach it to a bug report.</p>
+      <p class="modal-privacy">Includes the Qalam build, device/browser, theme, and your notes. It does not include translated text, history, saved cards, or logs.</p>
+      <label for="reportDetails">What happened?</label>
+      <textarea id="reportDetails" maxlength="4000" rows="4" placeholder="Describe the problem and what you were doing."></textarea>
+      <label for="reportSteps">Steps to reproduce</label>
+      <textarea id="reportSteps" maxlength="2000" rows="3" placeholder="1. Open…&#10;2. Type…&#10;3. Tap…"></textarea>
+      <label for="reportExpected">Expected behavior <span>(optional)</span></label>
+      <textarea id="reportExpected" maxlength="2000" rows="2" placeholder="What should have happened?"></textarea>
+      <div class="modal-actions">
+        <button class="ghost small" id="reportCancelBtn" type="button">Cancel</button>
+        <button class="primary" id="reportSubmitBtn" type="button">Save report</button>
+      </div>
+      <p class="status" id="reportStatus" role="status" aria-live="polite"></p>
+      <div class="hidden" id="reportResultWrap">
+        <label for="reportResult">Saved report</label>
+        <textarea id="reportResult" rows="10" readonly></textarea>
+        <button class="ghost small" id="reportCopyBtn" type="button">Copy report</button>
+      </div>
+    </section>
+  </div>
+
+  <script>window.QALAM_TOKEN = "__TOKEN__";</script>
+  <script src="/app.js"></script>
+</body>
+</html>

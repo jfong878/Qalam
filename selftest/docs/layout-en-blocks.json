@@ -1,0 +1,186 @@
+{
+ "Pages": 1,
+ "Blocks": [
+  {
+   "Id": "p0b1",
+   "Page": 0,
+   "Bbox": [
+    60.0,
+    48.0,
+    421.16,
+    105.008
+   ],
+   "Text": "A longer document heading for layout testing",
+   "Size": 20.0,
+   "Color": "1f334d",
+   "Font": "Helvetica-Bold",
+   "Bold": true,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Rtl": false,
+   "PageWidth": 595.0,
+   "Align": "left",
+   "LineHeight": 28.5,
+   "SourceBboxes": [
+    [
+     60.0,
+     48.0,
+     421.16,
+     105.008
+    ]
+   ]
+  },
+  {
+   "Id": "p0b2",
+   "Page": 0,
+   "Bbox": [
+    60.0,
+    136.0,
+    502.035,
+    167.362
+   ],
+   "Text": "This paragraph is deliberately long so the translated text has to wrap inside the same block without moving the surrounding page elements.",
+   "Size": 11.0,
+   "Color": "404040",
+   "Font": "Helvetica",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Rtl": false,
+   "PageWidth": 595.0,
+   "Align": "left",
+   "LineHeight": 15.68,
+   "SourceBboxes": [
+    [
+     60.0,
+     136.0,
+     502.035,
+     167.362
+    ]
+   ]
+  },
+  {
+   "Id": "p0b3",
+   "Page": 0,
+   "Bbox": [
+    60.0,
+    208.0,
+    140.091,
+    223.114
+   ],
+   "Text": "Short line in red.",
+   "Size": 11.0,
+   "Color": "731a1a",
+   "Font": "Helvetica",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Rtl": false,
+   "PageWidth": 595.0,
+   "Align": "left",
+   "LineHeight": 15.11,
+   "SourceBboxes": [
+    [
+     60.0,
+     208.0,
+     140.091,
+     223.114
+    ]
+   ]
+  },
+  {
+   "Id": "p0b4",
+   "Page": 0,
+   "Bbox": [
+    445.735,
+    236.0,
+    535.0,
+    251.114
+   ],
+   "Text": "Right-aligned note",
+   "Size": 11.0,
+   "Color": "1a4d80",
+   "Font": "Helvetica",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Rtl": false,
+   "PageWidth": 595.0,
+   "Align": "right",
+   "LineHeight": 15.11,
+   "SourceBboxes": [
+    [
+     445.735,
+     236.0,
+     535.0,
+     251.114
+    ]
+   ]
+  },
+  {
+   "Id": "p0b5",
+   "Page": 0,
+   "Bbox": [
+    60.0,
+    282.175,
+    204.298,
+    297.289
+   ],
+   "Text": "Open the Qalam project page",
+   "Size": 11.0,
+   "Color": "1a4d99",
+   "Font": "Helvetica",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Rtl": false,
+   "PageWidth": 595.0,
+   "Align": "left",
+   "LineHeight": 15.11,
+   "SourceBboxes": [
+    [
+     60.0,
+     282.175,
+     204.298,
+     297.289
+    ]
+   ]
+  },
+  {
+   "Id": "p0b6",
+   "Page": 0,
+   "Bbox": [
+    60.0,
+    790.0,
+    180.051,
+    802.366
+   ],
+   "Text": "Qalam layout sample - page 1",
+   "Size": 9.0,
+   "Color": "666666",
+   "Font": "Helvetica",
+   "Bold": false,
+   "Italic": false,
+   "Serif": false,
+   "Monospace": false,
+   "Rtl": false,
+   "PageWidth": 595.0,
+   "Align": "left",
+   "LineHeight": 12.37,
+   "SourceBboxes": [
+    [
+     60.0,
+     790.0,
+     180.051,
+     802.366
+    ]
+   ]
+  }
+ ],
+ "Warnings": []
+}

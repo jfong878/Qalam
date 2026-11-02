@@ -1,0 +1,11 @@
+query=كتاب
+from=ar to=en
+packs=2 pairs=20773
+OpenSubtitles v2024 (sampled): هل ترك كتاب حياته هنا؟ => He left a press book here?
+OpenSubtitles v2024 (sampled): أنت تعرف الكتاب المقدس. => You know your Bible.
+OpenSubtitles v2024 (sampled): نسينا كلام الكتاب المقدس! => We forgot the words of the Holy Book!
+OpenSubtitles v2024 (sampled): -ولكن كتاب مثل هذا سيصيبك بالارتباك => But a book like this, you'll only be confused.
+OpenSubtitles v2024 (sampled): وجدته في كتاب شعر قديم وكان مؤشر عليه => Well, I found it in an old book of poems. This one was marked.
+OpenSubtitles v2024 (sampled): خطر لى أنك ستحبين هذا الكتاب لقد قرأته => It occurred to me you might like this book. I've read it.
+OpenSubtitles v2024 (sampled): -لو فعلت ، فستكون معجزة من الكتاب المقدس => If it does, it'll be a miracle out of Scripture.
+OpenSubtitles v2024 (sampled): أصل النسب الذى كنت تسعى له ليس فى الكتاب => The coat of arms you were seeking is not in the book.

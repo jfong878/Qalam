@@ -1,0 +1,18 @@
+﻿{
+    "app":  "probe",
+    "status":  "accepted",
+    "timestamp":  "2026-10-31T23:40:26.5928544-07:00",
+    "details":  {
+                    "token":  "x",
+                    "expected":  "hello",
+                    "log":  [
+                                "line1",
+                                "line2"
+                            ],
+                    "clipboard":  "hello",
+                    "nested":  [
+                                   "a",
+                                   "b"
+                               ]
+                }
+}

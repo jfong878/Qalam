@@ -1,0 +1,25 @@
+# Build output
+dist/
+build/
+*.log
+
+# Local run artifacts
+.launch-check/
+
+# Multi-GB corpora and downloads (regenerable, kept out of git)
+downloads/
+concordance/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Node
+node_modules/
+
+# OS / editors
+Thumbs.db
+.DS_Store

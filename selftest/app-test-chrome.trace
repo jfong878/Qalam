@@ -1,0 +1,13 @@
+﻿17:35:52.942 start
+17:35:53.048 launching chrome
+17:35:54.661 window found
+17:35:54.885 activated pid 16640
+17:35:56.018 focused content
+17:35:57.401 copy sent
+17:35:57.927 log waited
+17:35:58.134 popup dismissed
+17:35:58.139 cleanup start
+17:35:58.728 cleanup parent killed
+17:36:11.242 cleanup profile processes killed
+17:36:15.062 cleanup files removed
+17:36:16.613 result written

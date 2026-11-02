@@ -1,0 +1,11 @@
+query=cabrón
+from=es to=en
+packs=2 pairs=50038
+OpenSubtitles v2024 (slang sample): Que te den, cabrón. => 0Oh, lay an egg, you old coot.
+OpenSubtitles v2024 (slang sample): Y yo soy un cabrón. => And I'm a heel?
+OpenSubtitles v2024 (slang sample): Es usted un cabrón... => You're a scoundrel!
+OpenSubtitles v2024 (sampled): No soy ningún cabrón. => I'm no heel.
+OpenSubtitles v2024 (slang sample): No volverá, el cabrón. => The bastard's not coming back.
+OpenSubtitles v2024 (slang sample): No, pero es un cabrón. => No, but he's still a swine.
+OpenSubtitles v2024 (slang sample): ¡No lo hagas! ¡Cabrón! => Don't, you big heel!
+OpenSubtitles v2024 (slang sample): Imbécil, pero no cabrón. => But not like a bastard.

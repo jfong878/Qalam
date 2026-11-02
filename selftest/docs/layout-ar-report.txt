@@ -1,0 +1,16 @@
+input=./selftest/docs/layout-ar.pdf
+output=./selftest/docs/layout-ar-en.pdf
+source=ar
+target=en
+progress=33% 1 of 3 text blocks
+progress=67% 2 of 3 text blocks
+progress=100% 3 of 3 text blocks
+progress=100% Restoring text into the original page layout
+progress=100% 3 text blocks written
+translated=3
+units=3
+pages=1
+skipped=0
+warnings=0
+elapsed_ms=2008
+exists=True

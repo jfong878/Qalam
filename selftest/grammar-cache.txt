@@ -1,0 +1,63 @@
+hablar [es] has=True pos=Verb defs=3 tenses=8
+  def: to talk; to speak; to communicate using words [with con ‘with’, along with de or sobre ‘about’, along with en ‘in (a language)’, along with dative ‘person spoken to’, along with accusative ‘what is said’]
+  def: (transitive) to speak (a language)
+  def: (reflexive, informal) to talk or speak regularly with someone, sometimes online [with con ‘with’]
+  nonfinite: past participle: hablado | infinitive: hablar | gerund: hablando
+  Present: yo hablo | tú hablas | él/ella habla | nosotros hablamos | vosotros habláis | ellos/ellas hablan
+  Preterite: yo hablé | tú hablaste | él/ella habló | nosotros hablamos | vosotros hablasteis | ellos/ellas hablaron
+  Imperfect: yo hablaba | tú hablabas | él/ella hablaba | nosotros hablábamos | vosotros hablabais | ellos/ellas hablaban
+  Future: yo hablaré | tú hablarás | él/ella hablará | nosotros hablaremos | vosotros hablaréis | ellos/ellas hablarán
+  Conditional: yo hablaría | tú hablarías | él/ella hablaría | nosotros hablaríamos | vosotros hablaríais | ellos/ellas hablarían
+  Present subjunctive: yo hable | tú hables | él/ella hable | nosotros hablemos | vosotros habléis | ellos/ellas hablen
+  Imperfect subjunctive: yo hablara | tú hablaras | él/ella hablara | nosotros habláramos | vosotros hablarais | ellos/ellas hablaran
+  Imperative: tú habla | él/ella hable | nosotros hablemos | vosotros hablad | ellos/ellas hablen
+comer [es] has=True pos=Verb defs=4 tenses=8
+  def: to eat
+  def: ( Spain ) to have lunch
+  def: ( colloquial ) to eat away, corrode
+  def: (transitive, chess, board games) to capture a piece
+  nonfinite: past participle: comido | infinitive: comer | gerund: comiendo
+  Present: yo como | tú comes | él/ella come | nosotros comemos | vosotros coméis | ellos/ellas comen
+  Preterite: yo comí | tú comiste | él/ella comió | nosotros comimos | vosotros comisteis | ellos/ellas comieron
+  Imperfect: yo comía | tú comías | él/ella comía | nosotros comíamos | vosotros comíais | ellos/ellas comían
+  Future: yo comeré | tú comerás | él/ella comerá | nosotros comeremos | vosotros comeréis | ellos/ellas comerán
+  Conditional: yo comería | tú comerías | él/ella comería | nosotros comeríamos | vosotros comeríais | ellos/ellas comerían
+  Present subjunctive: yo coma | tú comas | él/ella coma | nosotros comamos | vosotros comáis | ellos/ellas coman
+  Imperfect subjunctive: yo comiera | tú comieras | él/ella comiera | nosotros comiéramos | vosotros comierais | ellos/ellas comieran
+  Imperative: tú come | él/ella coma | nosotros comamos | vosotros comed | ellos/ellas coman
+parler [fr] has=True pos=Verb defs=3 tenses=6
+  def: ( intransitive ) to speak, talk
+  def: ( transitive ) to be able to communicate in a language; to speak
+  def: (heraldry) to cant; (of a coat of arms) to make a pun of its bearer's name
+  nonfinite: infinitive: parler | gerund: parlant | past participle: parlé
+  Present: je parle | tu parles | il/elle parle | nous parlons | vous parlez | ils/elles parlent
+  Imperfect: je parlais | tu parlais | il/elle parlait | nous parlions | vous parliez | ils/elles parlaient
+  Future: je parlerai | tu parleras | il/elle parlera | nous parlerons | vous parlerez | ils/elles parleront
+  Present subjunctive: je parle | tu parles | il/elle parle | nous parlions | vous parliez | ils/elles parlent
+  Imperfect subjunctive: je parlasse | tu parlasses | il/elle parlât | nous parlassions | vous parlassiez | ils/elles parlassent
+  Imperative: tu parle | nous parlons | vous parlez
+student [en] has=True pos=Noun defs=3 tenses=0
+  def: A person who studies or learns about a particular subject.
+  def: A person who is formally enrolled at a school, a college or university, or another educational institution.
+  def: (in particular) A person who is enrolled at a college or university (as contrasted with a pupil or schoolchild attending a primary or secondary school).
+كتب [ar] has=True pos=Verb defs=4 tenses=3
+  def: to mark (symbols, shapes, graphs, glyphs, letters, and the like) on a surface, to write, to inscribe
+  def: to draw ( figures )
+  def: to cut ( figures )
+  def: to produce or generate by writing
+  nonfinite: verbal noun: كِتَابَة | active participle: كَاتِب | passive participle: مَكْتُوب
+  Past (الماضي): I (أنا) كَتَبْتُ | you m. (أنتَ) كَتَبْتَ | you f. (أنتِ) كَتَبْتِ | he (هو) كَتَبَ | she (هي) كَتَبَتْ | we (نحن) كَتَبْنَا | you pl. m. (أنتم) كَتَبْتُمْ | they m. (هم) كَتَبُوا | they f. (هنّ) كَتَبْنَ
+  Present (المضارع): I (أنا) أَكْتُبُ | you m. (أنتَ) تَكْتُبُ | you f. (أنتِ) تَكْتُبِينَ | he (هو) يَكْتُبُ | she (هي) تَكْتُبُ | we (نحن) نَكْتُبُ | you pl. m. (أنتم) تَكْتُبُونَ | they m. (هم) يَكْتُبُونَ | they f. (هنّ) يَكْتُبْنَ
+  Imperative (الأمر): you m. (أنتَ) اُكْتُبْ | you f. (أنتِ) اُكْتُبِي | you pl. m. (أنتم) اُكْتُبُوا | you pl. f. (أنتنّ) اُكْتُبْنَ
+كَتَبَ [ar] has=True pos=Verb defs=4 tenses=3
+  def: to mark (symbols, shapes, graphs, glyphs, letters, and the like) on a surface, to write, to inscribe
+  def: to draw ( figures )
+  def: to cut ( figures )
+  def: to produce or generate by writing
+  nonfinite: verbal noun: كِتَابَة | active participle: كَاتِب | passive participle: مَكْتُوب
+  Past (الماضي): I (أنا) كَتَبْتُ | you m. (أنتَ) كَتَبْتَ | you f. (أنتِ) كَتَبْتِ | he (هو) كَتَبَ | she (هي) كَتَبَتْ | we (نحن) كَتَبْنَا | you pl. m. (أنتم) كَتَبْتُمْ | they m. (هم) كَتَبُوا | they f. (هنّ) كَتَبْنَ
+  Present (المضارع): I (أنا) أَكْتُبُ | you m. (أنتَ) تَكْتُبُ | you f. (أنتِ) تَكْتُبِينَ | he (هو) يَكْتُبُ | she (هي) تَكْتُبُ | we (نحن) نَكْتُبُ | you pl. m. (أنتم) تَكْتُبُونَ | they m. (هم) يَكْتُبُونَ | they f. (هنّ) يَكْتُبْنَ
+  Imperative (الأمر): you m. (أنتَ) اُكْتُبْ | you f. (أنتِ) اُكْتُبِي | you pl. m. (أنتم) اُكْتُبُوا | you pl. f. (أنتنّ) اُكْتُبْنَ
+cache_path=C:\Users\jfong\AppData\Local\Qalam\grammar-cache.json
+cache_count=5
+cache_has=True from_disk=True

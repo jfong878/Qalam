@@ -1,0 +1,11 @@
+query=كتاب
+from=ar to=en
+packs=2 pairs=50773
+OpenSubtitles v2024 (sampled): ليس في هذا الكتاب => Not in this book.
+OpenSubtitles v2024 (sampled): لقد ألفت ذلك الكتاب => I wrote that book.
+OpenSubtitles v2024 (sampled): لجمع كتاب توقيع طفلك؟ => To collect your kid's autograph book?
+OpenSubtitles v2024 (sampled): أنا سأرى اذا جاء الكتاب => I'll go see if the book came in.
+OpenSubtitles v2024 (sampled): ماذا لديك في هذا الكتاب؟ => What you got in that book?
+OpenSubtitles v2024 (sampled): هنا هو أفضل كتاب في العالم. => Here is the best textbook in the world.
+OpenSubtitles v2024 (sampled): (احضرت لك الكتاب المقدس,(بيك => I brought you a Bible, Peg.
+OpenSubtitles v2024 (sampled): . - كنت أبحث ... عن الكتاب.‏ => I was looking...for that book.

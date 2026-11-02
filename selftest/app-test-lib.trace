@@ -1,0 +1,179 @@
+﻿23:41:22.178 result start chrome
+23:41:22.183 json start
+23:42:41.983 result start chrome
+23:42:42.004 json start
+23:42:42.043 field token type System.String
+23:42:42.083 field expected type System.String
+23:42:42.088 field expected_chars type System.Int32
+23:42:42.129 field window_found type System.Boolean
+23:42:42.164 field accepted type System.Boolean
+23:42:42.189 field window_pid type System.UInt32
+23:42:42.223 field log type System.Object[]
+23:42:42.297 field clipboard type System.String
+23:42:42.306 field foreground_after type System.String
+23:42:42.333 field method type System.String
+23:42:42.366 field process type System.String
+23:42:42.397 field clipboard_matches type System.Boolean
+23:42:42.589 json done
+23:42:42.597 json written
+23:43:27.527 result start vscode
+23:43:27.533 json start
+23:43:27.577 field token type System.String
+23:43:27.615 field expected type System.String
+23:43:27.628 field expected_chars type System.Int32
+23:43:27.662 field window_found type System.Boolean
+23:43:27.697 field accepted type System.Boolean
+23:43:27.723 field window_pid type System.UInt32
+23:43:27.756 field log type System.Object[]
+23:43:27.816 field clipboard type System.String
+23:43:27.822 field method type System.String
+23:43:27.857 field process type System.String
+23:43:27.899 field clipboard_matches type System.Boolean
+23:43:28.109 json done
+23:43:28.118 json written
+23:44:10.196 result start word
+23:44:10.220 json start
+23:44:10.315 field token type System.String
+23:44:10.360 field expected type System.String
+23:44:10.372 field expected_chars type System.Int32
+23:44:10.411 field window_found type System.Boolean
+23:44:10.440 field accepted type System.Boolean
+23:44:10.475 field error type System.String
+23:44:10.671 json done
+23:44:10.679 json written
+23:44:36.702 result start word
+23:44:36.710 json start
+23:44:36.780 field token type System.String
+23:44:36.815 field expected type System.String
+23:44:36.825 field expected_chars type System.Int32
+23:44:36.858 field window_found type System.Boolean
+23:44:36.890 field accepted type System.Boolean
+23:44:36.921 field error type System.String
+23:44:37.091 json done
+23:44:37.105 json written
+23:48:03.596 result start word
+23:48:03.601 json start
+23:48:03.637 field token type System.String
+23:48:03.663 field expected type System.String
+23:48:03.681 field expected_chars type System.Int32
+23:48:03.701 field window_found type System.Boolean
+23:48:03.724 field accepted type System.Boolean
+23:48:03.746 field window_pid type System.UInt32
+23:48:03.777 field log type System.Object[]
+23:48:03.808 field clipboard type System.String
+23:48:03.823 field method type System.String
+23:48:03.849 field process type System.String
+23:48:03.876 field clipboard_matches type System.Boolean
+23:48:04.000 json done
+23:48:04.007 json written
+23:48:25.156 result start notepad
+23:48:25.162 json start
+23:48:25.240 field token type System.String
+23:48:25.273 field expected type System.String
+23:48:25.291 field expected_chars type System.Int32
+23:48:25.328 field window_found type System.Boolean
+23:48:25.372 field accepted type System.Boolean
+23:48:25.408 field error type System.String
+23:48:25.577 json done
+23:48:25.588 json written
+17:31:49.304 result start chrome
+17:31:49.310 json start
+17:31:49.380 field token type System.String
+17:31:49.410 field expected type System.String
+17:31:49.442 field expected_chars type System.Int32
+17:31:49.492 field window_found type System.Boolean
+17:31:49.572 field accepted type System.Boolean
+17:31:49.654 field window_pid type System.UInt32
+17:31:49.709 field log type System.Object[]
+17:31:49.798 field clipboard type System.String
+17:31:49.803 field foreground_after type System.String
+17:31:49.846 field method type System.String
+17:31:49.913 field process type System.String
+17:31:49.998 field clipboard_matches type System.Boolean
+17:31:50.241 json done
+17:31:50.250 json written
+17:32:20.721 result start vscode
+17:32:20.761 json start
+17:32:20.847 field token type System.String
+17:32:20.925 field expected type System.String
+17:32:20.978 field expected_chars type System.Int32
+17:32:21.039 field window_found type System.Boolean
+17:32:21.105 field accepted type System.Boolean
+17:32:21.158 field window_pid type System.UInt32
+17:32:21.236 field log type System.Object[]
+17:32:21.299 field clipboard type System.String
+17:32:21.360 field skip type System.Object[]
+17:32:21.770 json done
+17:32:21.869 json written
+17:32:54.372 result start word
+17:32:54.378 json start
+17:32:54.437 field token type System.String
+17:32:54.476 field expected type System.String
+17:32:54.540 field expected_chars type System.Int32
+17:32:54.593 field window_found type System.Boolean
+17:32:54.629 field accepted type System.Boolean
+17:32:54.669 field window_pid type System.UInt32
+17:32:54.721 field log type System.Object[]
+17:32:54.762 field clipboard type System.String
+17:32:54.796 field method type System.String
+17:32:54.844 field process type System.String
+17:32:54.883 field clipboard_matches type System.Boolean
+17:32:55.062 json done
+17:32:55.074 json written
+17:36:15.219 result start chrome
+17:36:15.231 json start
+17:36:15.337 field token type System.String
+17:36:15.390 field expected type System.String
+17:36:15.448 field expected_chars type System.Int32
+17:36:15.514 field window_found type System.Boolean
+17:36:15.569 field accepted type System.Boolean
+17:36:15.630 field window_pid type System.UInt32
+17:36:15.861 field log type System.Object[]
+17:36:15.999 field clipboard type System.String
+17:36:16.029 field foreground_after type System.String
+17:36:16.069 field method type System.String
+17:36:16.135 field process type System.String
+17:36:16.199 field clipboard_matches type System.Boolean
+17:36:16.547 json done
+17:36:16.561 json written
+17:36:46.085 result start vscode
+17:36:46.095 json start
+17:36:46.176 field token type System.String
+17:36:46.206 field expected type System.String
+17:36:46.249 field expected_chars type System.Int32
+17:36:46.307 field window_found type System.Boolean
+17:36:46.358 field accepted type System.Boolean
+17:36:46.413 field window_pid type System.UInt32
+17:36:46.479 field error type System.String
+17:36:46.919 json done
+17:36:46.938 json written
+17:37:10.955 result start word
+17:37:10.965 json start
+17:37:11.066 field token type System.String
+17:37:11.110 field expected type System.String
+17:37:11.164 field expected_chars type System.Int32
+17:37:11.219 field window_found type System.Boolean
+17:37:11.272 field accepted type System.Boolean
+17:37:11.316 field window_pid type System.UInt32
+17:37:11.381 field log type System.Object[]
+17:37:11.430 field clipboard type System.String
+17:37:11.456 field method type System.String
+17:37:11.501 field process type System.String
+17:37:11.561 field clipboard_matches type System.Boolean
+17:37:11.765 json done
+17:37:11.777 json written
+17:38:36.509 result start vscode
+17:38:36.519 json start
+17:38:36.594 field token type System.String
+17:38:36.630 field expected type System.String
+17:38:36.675 field expected_chars type System.Int32
+17:38:36.729 field window_found type System.Boolean
+17:38:36.781 field accepted type System.Boolean
+17:38:36.829 field window_pid type System.UInt32
+17:38:36.891 field log type System.Object[]
+17:38:36.957 field clipboard type System.String
+17:38:36.991 field method type System.String
+17:38:37.047 field process type System.String
+17:38:37.094 field clipboard_matches type System.Boolean
+17:38:37.281 json done
+17:38:37.292 json written
