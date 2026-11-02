@@ -17,6 +17,25 @@ $documentsDest = Join-Path $dest 'documents'
 $mobileDest = Join-Path $dest 'mobile'
 $concordanceDest = Join-Path $dest 'concordance'
 
+# Refuse before copying anything if a fresh install would be left half-finished.
+# An existing virtual environment is enough on updates; Python is not required then.
+$venvPython = Join-Path $tashkeelDest '.venv\Scripts\python.exe'
+$systemPython = $null
+if (-not (Test-Path -LiteralPath $venvPython)) {
+    $systemPython = (Get-Command python.exe -ErrorAction SilentlyContinue).Source
+    if ($systemPython) {
+        $pythonInfo = Get-Item -LiteralPath $systemPython -ErrorAction SilentlyContinue
+        if (-not $pythonInfo -or $pythonInfo.Length -eq 0) { $systemPython = $null }
+    }
+    if ($systemPython) {
+        & $systemPython --version 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) { $systemPython = $null }
+    }
+    if (-not $systemPython) {
+        throw 'Python 3 is required for offline tashkeel. Install Python and re-run this script.'
+    }
+}
+
 function New-Shortcut([string]$Path, [string]$Target, [string]$WorkDir, [string]$Arguments = '') {
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($Path)
@@ -82,12 +101,7 @@ if (Test-Path -LiteralPath $concordanceSource) {
     }
 }
 
-$venvPython = Join-Path $tashkeelDest '.venv\Scripts\python.exe'
 if (-not (Test-Path -LiteralPath $venvPython)) {
-    $systemPython = (Get-Command python.exe -ErrorAction SilentlyContinue).Source
-    if (-not $systemPython) {
-        throw 'Python 3 is required for offline tashkeel. Install Python and re-run this script.'
-    }
     Write-Host "Creating tashkeel virtual environment in $tashkeelDest\.venv ..."
     & $systemPython -m venv (Join-Path $tashkeelDest '.venv')
     if ($LASTEXITCODE -ne 0) { throw "python -m venv failed with exit code $LASTEXITCODE" }

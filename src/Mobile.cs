@@ -770,7 +770,7 @@ namespace Qalam
                         "@echo off\r\n" +
                         "setlocal\r\n" +
                         "cd /d \"%~dp0\"\r\n" +
-                        "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"%~dp0install.ps1\"\r\n" +
+                        "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"%~dp0install.ps1\" -SkipBuild\r\n" +
                         "if errorlevel 1 pause\r\n",
                         new UTF8Encoding(false));
                     File.WriteAllText(Path.Combine(stage, "PACKAGE.txt"),
