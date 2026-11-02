@@ -1,8 +1,14 @@
 # Qalam application selection tests
 
-The capture tests were rerun against the final installed Qalam build on 2026-11-01,
+The capture tests were rerun against the then-installed Qalam build on 2026-11-01,
 using temporary profiles/documents so no user files or tabs were modified. The
 2026-10-31 baseline is noted where a capture path changed.
+
+> Build note: the package installer was fixed after the capture run, and the installed
+> build is now `4bbecfbc…` rather than the `f9ce4c41…` build used for the table below.
+> `--selftest` passed on the new build; the Chrome, VS Code, and Word capture tests
+> were not rerun on it. See `.launch-check/RELEASE-TEST.md` for the clean-install
+> status.
 
 | Application | Capture path | Result | Evidence |
 | --- | --- | --- | --- |
