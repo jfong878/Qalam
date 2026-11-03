@@ -160,7 +160,7 @@ namespace Qalam
             if (!AllowedUri(manifestUri))
                 throw new InvalidOperationException("UpdateUrl must use HTTPS (HTTP is allowed only for loopback testing).");
 
-            using (HttpResponseMessage response = await Http.GetAsync(manifestUri).ConfigureAwait(false))
+            using (HttpResponseMessage response = await FetchManifestAsync(manifestUri).ConfigureAwait(false))
             {
                 response.EnsureSuccessStatusCode();
                 string json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -193,6 +193,52 @@ namespace Qalam
                 info.Mandatory = manifest.Mandatory;
                 return info;
             }
+        }
+
+        // GitHub's /releases/latest alias lags behind a fresh publish, and while
+        // it lags it can point at a tag that has no manifest, which the app sees
+        // as a 404. Ask the API for the tag and take the manifest from there.
+        private static async Task<HttpResponseMessage> FetchManifestAsync(Uri manifestUri)
+        {
+            HttpResponseMessage response = await Http.GetAsync(manifestUri).ConfigureAwait(false);
+            if (response.StatusCode != System.Net.HttpStatusCode.NotFound) return response;
+            response.Dispose();
+
+            string[] parts = manifestUri.AbsolutePath.Split('/');
+            if (parts.Length != 7 || parts[3] != "releases" || parts[4] != "latest" || parts[5] != "download")
+                return await Http.GetAsync(manifestUri).ConfigureAwait(false);
+
+            string owner = parts[1];
+            string name = parts[2];
+            string file = parts[6];
+            string api = "https://api.github.com/repos/" + owner + "/" + name + "/releases/latest";
+            // The compiler here predates await-in-catch, so the failure is
+            // recorded and handled after the block.
+            string json = null;
+            try
+            {
+                using (HttpResponseMessage info = await Http.GetAsync(api).ConfigureAwait(false))
+                {
+                    if (info.IsSuccessStatusCode)
+                        json = await info.Content.ReadAsStringAsync().ConfigureAwait(false);
+                }
+            }
+            catch
+            {
+                json = null;
+            }
+            if (json == null) return await Http.GetAsync(manifestUri).ConfigureAwait(false);
+
+            int key = json.IndexOf("\"tag_name\"", StringComparison.Ordinal);
+            if (key < 0) return await Http.GetAsync(manifestUri).ConfigureAwait(false);
+            int start = json.IndexOf('"', json.IndexOf(':', key) + 1);
+            int end = start < 0 ? -1 : json.IndexOf('"', start + 1);
+            if (start < 0 || end <= start) return await Http.GetAsync(manifestUri).ConfigureAwait(false);
+            string tag = json.Substring(start + 1, end - start - 1);
+
+            Uri tagged = new Uri("https://github.com/" + owner + "/" + name + "/releases/download/" + tag + "/" + file);
+            Logger.Write("feed 404, retrying tag " + tag);
+            return await Http.GetAsync(tagged).ConfigureAwait(false);
         }
 
         private static async Task<string> DownloadAsync(UpdateInfo update)
