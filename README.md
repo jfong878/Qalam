@@ -2,6 +2,8 @@
 
 ![Qalam Qaaf mark](assets/qalam-mark-64.png)
 
+[![Latest release](https://img.shields.io/github/v/release/jfong878/Qalam?label=download)](https://github.com/jfong878/Qalam/releases/latest)
+
 A local, independent replacement for Reverso Context's **Ctrl + C + C** popup, with
 offline **Arabic Tashkeel** and **Chinese Pinyin** for text that has none. The desktop
 app also serves a responsive browser client, so the same translation, study, and
@@ -61,7 +63,8 @@ not a Qalam account.
 ## Install
 
 Download and run `Qalam-Setup-<version>.exe`. The current public, unsigned build is
-published at <https://github.com/jfong878/Qalam/releases/latest>.
+published at <https://github.com/jfong878/Qalam/releases/latest>, which always redirects
+to the newest release.
 
 This is a one-click, per-user installer (no UAC) modeled on the OmniPDF release: it installs to
 `%LOCALAPPDATA%\Qalam`, creates Start Menu, Startup, and desktop shortcuts,
@@ -119,8 +122,11 @@ already built at the requested version.
 ## Updates
 
 Qalam checks a generic HTTPS feed shortly after startup, every six hours while
-it remains running, and from **tray → Check for updates…**. Fresh installs
-default to the public GitHub release feed:
+it remains running, and from **tray → Check for updates…**. The feed moved from the
+old `qalam-releases` repository to the main repository; installs made before 1.0.3
+still carry the old URL and need the installer run once from
+<https://github.com/jfong878/Qalam/releases/latest>, which rewrites it in place.
+Fresh installs default to the public GitHub release feed:
 `https://github.com/jfong878/Qalam/releases/latest/download/latest.json`.
 Override `UpdateUrl` in `config.json` to use another HTTPS `latest.json`
 manifest, or set it to an empty string to disable automatic checks:
