@@ -1736,7 +1736,14 @@ namespace Qalam
         // Aboo Saalih scheme only; the worker owns the table.
         public string Transliterate(string text)
         {
-            return TextCommand("translit", text, "Transliteration", null);
+            return Transliterate(text, null);
+        }
+
+        public string Transliterate(string text, string lahja)
+        {
+            // The romanization must follow the same register as the card and
+            // the voice, or a Lahjah setting changes nothing the reader sees.
+            return TextCommand("translit", text, "Transliteration", lahja);
         }
 
         private string TextCommand(string command, string text, string name, string lahja)
@@ -3335,7 +3342,7 @@ namespace Qalam
                     string vocalized = await Task.Run(() => _tashkeel.Diacritize(transcription, _config.SpokenLahjah));
                     Logger.Write("tashkeel ok: " + role + " chars=" + vocalized.Length);
                     string romanized = null;
-                    try { romanized = await Task.Run(() => _tashkeel.Transliterate(transcription)); }
+                    try { romanized = await Task.Run(() => _tashkeel.Transliterate(transcription, _config.SpokenLahjah)); }
                     catch (Exception ex) { Logger.Write("transliteration: " + ex.Message); }
                     _popup.ShowTashkeel(vocalized, role, romanized);
                 }
