@@ -225,7 +225,7 @@ def apply_fixups(text, original=None):
             pieces.append(token)
             continue
         tail = core[-1] if core and core[-1] in SHORT_TAIL else ""
-        if tail and fixed[-1] not in SHORT_TAIL:
+        if tail and fixed[-1] not in SHORT_TAIL and fixed[-1] != "ْ":
             fixed += tail
         pieces.append(prefix + core_prefix + fixed + suffix)
     return " ".join(pieces)
