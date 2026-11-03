@@ -182,7 +182,8 @@ SUN_LETTERS = {
     "ت": "t", "ث": "th", "د": "d", "ذ": "dh", "ر": "r", "ز": "z", "س": "s",
     "ش": "sh", "ص": "ṣ", "ض": "ḍ", "ط": "ṭ", "ظ": "dH", "ل": "l", "ن": "n",
 }
-SHORT_VOWELS = {"a", "u", "i", "an", "un", "in", "aa", "ee", "oo", "Aa"}
+SHORT_TRANSLIT_MARKS = set(SHORT_VOWELS) | {"\u0651", "\u0652", "\u0670", "\u0640"}
+VOWELS = {"a", "u", "i", "an", "un", "in", "aa", "ee", "oo", "Aa"}
 MARKS = set(SHORT_VOWELS) | {"\u0651", "\u0652", "\u0670", "\u0640"}
 
 
@@ -239,7 +240,6 @@ def _word_letters(word):
                 out.append("y")
             continue
         if ch == "ة":
-            out.append("at" if _next_is_vowel(chars, index) else "ah")
             continue
         if ch == "ء":
             out.append("'")
@@ -291,9 +291,22 @@ def _translit_word(word, next_word):
             return "A" + SUN_LETTERS[bare[2]] + "-" + tail
         return "Al-" + tail
 
-    if bare.endswith("ة") and next_word is not None:
-        if "".join(ch for ch in next_word if ch not in TRANSLIT_MARKS).startswith("ال") and rendered.endswith("ah"):
-            rendered = rendered[:-2] + "at"
+    if bare.endswith("ة"):
+        vowel = ""
+        for candidate in ("an", "un", "in", "u", "i", "a"):
+            if rendered.endswith(candidate):
+                vowel = rendered[-len(candidate):]
+                rendered = rendered[:-len(candidate)]
+                break
+        if next_word is None:
+            rendered += "ah"
+        else:
+            bare_next = "".join(ch for ch in next_word if ch not in TRANSLIT_MARKS)
+            # A following particle keeps the case vowel: was-Salaatu was-Salaam.
+            if bare_next[:1] in ("و", "ف"):
+                rendered += "at" + vowel
+            else:
+                rendered += "at"
     return rendered
 
 
