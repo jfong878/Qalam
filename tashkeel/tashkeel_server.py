@@ -149,6 +149,9 @@ def _split_punct(token):
 
 
 FIXUPS = {
+    "إن": "إِنْ",
+    "أن": "أَنْ",
+    "بعد": "بَعِدْ",
     "السلام": "السَلَام",
     "عليكم": "عَلَيْكُم",
     "الصلاة": "الصَلَاة",
@@ -382,6 +385,9 @@ def _translit_word(word, next_word, glide, at_start):
             body_word = body_word.replace("\u0651", "", 1)
 
     rendered = _word_letters(body_word)
+    # A word-final hamza closes the syllable: shaa', not shaa'a.
+    if rendered.endswith("'a"):
+        rendered = rendered[:-1]
 
     # Taa ul-Marbootah: -ah in pause, -at before a word, -atu before a particle.
     taa = ""
