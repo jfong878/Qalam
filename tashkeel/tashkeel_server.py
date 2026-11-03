@@ -148,6 +148,72 @@ def _split_punct(token):
     return token[:start], token[start:end], token[end:]
 
 
+FIXUPS = {
+    "السلام": "السَلَام",
+    "عليكم": "عَلَيْكُم",
+    "الصلاة": "الصَلَاة",
+    "الله": "اللَّه",
+    "لله": "لِلَّه",
+    "الحمد": "الْحَمْد",
+    "الرحمن": "الرَّحْمَن",
+    "الرحيم": "الرَّحِيم",
+    "محمد": "مُحَمَّد",
+    "الاسلام": "الْإِسْلَام",
+    "مسلم": "مُسْلِم",
+    "ماذا": "مَاذَا",
+    "كيف": "كَيْفَ",
+    "اليوم": "الْيَوْم",
+    "الشغل": "الشُّغْل",
+    "شكرا": "شُكْرًا",
+    "اسمك": "اسْمُكَ",
+    "انا": "أَنَا",
+    "تريد": "تُرِيدُ",
+}
+SHORT_TAIL = {"َ", "ُ", "ِ", "ً", "ٌ", "ٍ"}
+
+
+def apply_fixups(text):
+    """Repair the words Mishkal reliably mis-vocalizes.
+
+    It returns السُّلَّام and الصَلَاَة for the two most
+    common words in the app, which then read sullaam and salaaah.
+    """
+    pieces = []
+    for token in text.split(" "):
+        if not token:
+            pieces.append(token)
+            continue
+        prefix, core, suffix = _split_punct(token)
+        bare = NO_DIACRITICS.sub("", core)
+        fixed = FIXUPS.get(bare)
+        core_prefix = ""
+        if fixed is None:
+            # A conjunction or preposition glued to a repaired word:
+            # وَالسَّلَامُ must reach the same fixup as السَّلَامُ.
+            for key in FIXUPS:
+                lead = len(bare) - len(key)
+                if lead in (1, 2) and bare.endswith(key) and bare[0] in "وفبكل":
+                    seen = 0
+                    cut = 0
+                    for index, ch in enumerate(core):
+                        if NO_DIACRITICS.match(ch):
+                            seen += 1
+                        if seen == lead:
+                            cut = index + 1
+                            break
+                    core_prefix = core[:cut]
+                    fixed = FIXUPS[key]
+                    break
+        if fixed is None:
+            pieces.append(token)
+            continue
+        tail = core[-1] if core and core[-1] in SHORT_TAIL else ""
+        if tail and fixed[-1] not in SHORT_TAIL:
+            fixed += tail
+        pieces.append(prefix + core_prefix + fixed + suffix)
+    return " ".join(pieces)
+
+
 def apply_lahja(text, lahja):
     """Rewrite a vocalized line toward the spoken form of one lahja."""
     if not lahja or lahja == "fusha":
@@ -489,7 +555,7 @@ def main():
             if cmd == "translit":
                 if vocalizer is None:
                     raise RuntimeError("mishkal import failed: %s" % mishkal_error)
-                spoken = apply_lahja(vocalizer.tashkeel(text), lahja)
+                spoken = apply_lahja(apply_fixups(vocalizer.tashkeel(text)), lahja)
                 respond({"id": req.get("id"), "ok": True, "text": transliterate(spoken)})
                 continue
 
@@ -503,7 +569,7 @@ def main():
 
             if vocalizer is None:
                 raise RuntimeError("mishkal import failed: %s" % mishkal_error)
-            vocalized = apply_lahja(vocalizer.tashkeel(text), lahja)
+            vocalized = apply_lahja(apply_fixups(vocalizer.tashkeel(text)), lahja)
             respond({"id": req.get("id"), "ok": True, "text": clean_output(vocalized)})
         except Exception:
             respond(
