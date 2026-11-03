@@ -61,7 +61,7 @@ not a Qalam account.
 ## Install
 
 Download and run `Qalam-Setup-<version>.exe`. The current public, unsigned build is
-published at <https://github.com/jfong878/qalam-releases/releases/latest>.
+published at <https://github.com/jfong878/Qalam/releases/latest>.
 
 This is a one-click, per-user installer (no UAC) modeled on the OmniPDF release: it installs to
 `%LOCALAPPDATA%\Qalam`, creates Start Menu, Startup, and desktop shortcuts,
@@ -121,7 +121,7 @@ already built at the requested version.
 Qalam checks a generic HTTPS feed shortly after startup, every six hours while
 it remains running, and from **tray → Check for updates…**. Fresh installs
 default to the public GitHub release feed:
-`https://github.com/jfong878/qalam-releases/releases/latest/download/latest.json`.
+`https://github.com/jfong878/Qalam/releases/latest/download/latest.json`.
 Override `UpdateUrl` in `config.json` to use another HTTPS `latest.json`
 manifest, or set it to an empty string to disable automatic checks:
 

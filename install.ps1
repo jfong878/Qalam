@@ -147,6 +147,26 @@ if (-not $pymupdfOk) {
     Copy-MsvcRuntime
 }
 
+# Installs made before 1.0.3 carry the old feed URL in config.json, and an
+# existing UpdateUrl is never overwritten by the app itself. Move those installs
+# to the consolidated release repository once, here, so they keep receiving
+# updates after the old feed is frozen. An untouched-update token is left alone.
+$configPath = Join-Path $dest 'config.json'
+$legacyFeed = 'https://github.com/jfong878/qalam-releases/releases/latest/download/latest.json'
+$currentFeed = 'https://github.com/jfong878/Qalam/releases/latest/download/latest.json'
+if (Test-Path -LiteralPath $configPath) {
+    try {
+        $configText = [IO.File]::ReadAllText($configPath)
+        if ($configText.Contains($legacyFeed)) {
+            $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+            [IO.File]::WriteAllText($configPath, $configText.Replace($legacyFeed, $currentFeed), $utf8NoBom)
+            Write-Host 'Update feed moved to the consolidated Qalam repository.'
+        }
+    } catch {
+        Write-Host ('Could not migrate the update feed: ' + $_.Exception.Message)
+    }
+}
+
 $startupShortcut = Join-Path ([Environment]::GetFolderPath('Startup')) 'Qalam.lnk'
 $programsShortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Qalam.lnk'
 New-Shortcut -Path $startupShortcut -Target (Join-Path $dest 'Qalam.exe') -WorkDir $dest -Arguments '--background'

@@ -2,6 +2,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$Version,
     [Parameter(Mandatory = $true)][string]$Notes,
+    [string]$Repo = 'jfong878/Qalam',
     [switch]$BuildOnly,
     [switch]$PublishOnly,
     [switch]$Resume
@@ -10,7 +11,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $dist = Join-Path $root 'dist'
-$repo = 'jfong878/qalam-releases'
+$repo = $Repo
 $assemblyPath = Join-Path $root 'src\AssemblyInfo.cs'
 $buildScript = Join-Path $root 'build-installer.ps1'
 $utf8 = New-Object System.Text.UTF8Encoding($false)
@@ -177,16 +178,24 @@ if ([string]$repoInfo.visibility -ne 'PUBLIC' -or [bool]$repoInfo.isPrivate) {
 
 $feedUrl = 'https://github.com/' + $repo + '/releases/latest/download/latest.json'
 Write-Step ('Checking current public feed: ' + $feedUrl)
+# A repository's first release has no feed yet. That is the only case where a
+# 404 is expected; every other failure still refuses to publish blind.
+[Version]$remoteVersion = [Version]'0.0.0'
 try {
     $remote = Invoke-RestMethod -Uri $feedUrl -UseBasicParsing -Headers @{
         'Cache-Control' = 'no-cache'
         'Pragma' = 'no-cache'
     }
+    $remoteVersion = [Version]([string]$remote.version)
 }
 catch {
-    throw ('Could not read the current public update feed. Refusing to publish: ' + $_.Exception.Message)
+    $status = 0
+    try { $status = [int]$_.Exception.Response.StatusCode } catch { }
+    if ($status -ne 404) {
+        throw ('Could not read the current public update feed. Refusing to publish: ' + $_.Exception.Message)
+    }
+    Write-Step 'No feed yet; treating this as the first release'
 }
-[Version]$remoteVersion = [Version]([string]$remote.version)
 if ($remoteVersion -ge $targetVersion) {
     throw ('Public feed is already at ' + $remoteVersion + '; refusing to publish ' + $targetVersion + '.')
 }

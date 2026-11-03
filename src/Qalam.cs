@@ -260,7 +260,7 @@ namespace Qalam
 
     public sealed class Config
     {
-        private const string DefaultUpdateUrl = "https://github.com/jfong878/qalam-releases/releases/latest/download/latest.json";
+        private const string DefaultUpdateUrl = "https://github.com/jfong878/Qalam/releases/latest/download/latest.json";
 
         public bool AutoTarget { get; set; }
         public string Target { get; set; }
