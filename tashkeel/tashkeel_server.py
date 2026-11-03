@@ -353,6 +353,11 @@ def _translit_word(word, next_word, glide, at_start):
     if not bare:
         return word
 
+    # The divine name does not take the article prefix: it is Allaah, not al-Laah.
+    if bare in ("الله", "لله"):
+        vowel = {"ُ": "u", "ِ": "i", "َ": "a"}.get(word[-1:], "")
+        return ("Allaah" if bare.startswith("ا") else "lillaah") + vowel
+
     particle = ""
     if len(bare) > 3 and bare[0] in ("و", "ف") and bare.startswith("ال", 1):
         particle = "wa" if bare[0] == "و" else "fa"
