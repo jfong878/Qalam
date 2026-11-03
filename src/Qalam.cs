@@ -260,7 +260,7 @@ namespace Qalam
 
     public sealed class Config
     {
-        private const string DefaultUpdateUrl = "https://github.com/jfong878/Qalam/releases/latest/download/latest.json";
+        internal const string DefaultUpdateUrl = "https://github.com/jfong878/Qalam/releases/latest/download/latest.json";
 
         public bool AutoTarget { get; set; }
         public string Target { get; set; }
@@ -334,6 +334,14 @@ namespace Qalam
                         bool addUpdateUrl = json.IndexOf("\"UpdateUrl\"", StringComparison.OrdinalIgnoreCase) < 0;
                         if (addUpdateUrl) cfg.UpdateUrl = DefaultUpdateUrl;
                         else if (cfg.UpdateUrl == null) cfg.UpdateUrl = DefaultUpdateUrl;
+                        // The qalam-releases repository is gone. Installs that still
+                        // carry its feed get a 404 from Check for updates, so move
+                        // them here even when the installer never ran.
+                        if (cfg.UpdateUrl.IndexOf("qalam-releases", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            cfg.UpdateUrl = DefaultUpdateUrl;
+                            addUpdateUrl = true;
+                        }
                         bool addAutoUpdate = json.IndexOf("\"AutoUpdate\"", StringComparison.OrdinalIgnoreCase) < 0;
                         if (addAutoUpdate) cfg.AutoUpdate = true;
                         // Existing config files predate the on-device model. Keep
@@ -1723,6 +1731,12 @@ namespace Qalam
             return TextCommand("pinyin", text, "Pinyin", null);
         }
 
+        // Aboo Saalih scheme only; the worker owns the table.
+        public string Transliterate(string text)
+        {
+            return TextCommand("translit", text, "Transliteration", null);
+        }
+
         private string TextCommand(string command, string text, string name, string lahja)
         {
             lock (_gate)
@@ -2085,6 +2099,7 @@ namespace Qalam
         private readonly Border _tashkeelPanel;
         private readonly TextBlock _tashkeelLabel;
         private readonly TextBlock _tashkeel;
+        private readonly TextBlock _transliteration;
         private readonly Button _copyButton;
         private readonly Button _listenButton;
         private readonly Button _charactersButton;
@@ -2105,6 +2120,7 @@ namespace Qalam
         private string _tashkeelKind = "TASHKEEL";
         private string _speechLang = "";
         private string _cachedTashkeel = "";
+        private string _cachedTransliteration = "";
         private string _cachedTashkeelRole = "";
         private string _cachedTashkeelKind = "TASHKEEL";
         private string _cachedTashkeelSpeech = "";
@@ -2253,6 +2269,15 @@ namespace Qalam
             _tashkeel.TextAlignment = TextAlignment.Right;
 
             tashkeelStack.Children.Add(_tashkeel);
+
+            _transliteration = Ui.Label("", 12, Ui.Muted, FontWeights.Normal);
+            _transliteration.TextWrapping = TextWrapping.Wrap;
+            _transliteration.LineHeight = 18;
+            _transliteration.Margin = new Thickness(0, 6, 0, 0);
+            _transliteration.FlowDirection = FlowDirection.LeftToRight;
+            _transliteration.TextAlignment = TextAlignment.Left;
+            _transliteration.Visibility = Visibility.Collapsed;
+            tashkeelStack.Children.Add(_transliteration);
 
             _tashkeelPanel.Child = tashkeelStack;
             body.Children.Add(_tashkeelPanel);
@@ -2579,10 +2604,19 @@ namespace Qalam
 
         public void ShowTashkeel(string text, string role)
         {
+            ShowTashkeel(text, role, null);
+        }
+
+        public void ShowTashkeel(string text, string role, string transliteration)
+        {
             // The register also picks the speech tag, so Listen reads the same
             // lahja the tashkeel was produced in.
             ShowTranscription("TASHKEEL", text, role, true, text,
                 Pronunciation.TtsLanguage(Pronunciation.Current));
+            _cachedTransliteration = transliteration == null ? "" : transliteration;
+            _transliteration.Text = _cachedTransliteration;
+            _transliteration.Visibility = string.IsNullOrEmpty(_cachedTransliteration)
+                ? Visibility.Collapsed : Visibility.Visible;
         }
 
         public void ShowPinyin(string pinyin, string source, string role)
@@ -3298,7 +3332,10 @@ namespace Qalam
                 {
                     string vocalized = await Task.Run(() => _tashkeel.Diacritize(transcription, _config.SpokenLahja));
                     Logger.Write("tashkeel ok: " + role + " chars=" + vocalized.Length);
-                    _popup.ShowTashkeel(vocalized, role);
+                    string romanized = null;
+                    try { romanized = await Task.Run(() => _tashkeel.Transliterate(transcription)); }
+                    catch (Exception ex) { Logger.Write("transliteration: " + ex.Message); }
+                    _popup.ShowTashkeel(vocalized, role, romanized);
                 }
                 catch (Exception ex)
                 {

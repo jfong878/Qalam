@@ -420,13 +420,25 @@ namespace Qalam
             hint.Margin = new Thickness(0, 22, 0, 0);
             stack.Children.Add(hint);
 
+            StackPanel actionRow = new StackPanel();
+            actionRow.Orientation = Orientation.Horizontal;
+            actionRow.HorizontalAlignment = HorizontalAlignment.Left;
+            actionRow.Margin = new Thickness(0, 10, 0, 0);
+
             Button report = Ui.SmallOutlineButton("Report a bug", delegate
             {
                 BugReportWindow.ShowReport(_config);
             });
-            report.HorizontalAlignment = HorizontalAlignment.Left;
-            report.Margin = new Thickness(0, 10, 0, 0);
-            stack.Children.Add(report);
+            report.Margin = new Thickness(0, 0, 8, 0);
+            actionRow.Children.Add(report);
+
+            Button checkUpdates = Ui.SmallOutlineButton("Check for updates", delegate
+            {
+                UpdateService.CheckAndDownload(_config, true);
+            });
+            actionRow.Children.Add(checkUpdates);
+
+            stack.Children.Add(actionRow);
 
             ScrollViewer scroll = new ScrollViewer();
             scroll.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;

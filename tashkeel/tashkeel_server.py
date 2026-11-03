@@ -168,6 +168,152 @@ def apply_lahja(text, lahja):
     return " ".join(pieces)
 
 
+# Aboo Saalih transliteration (Maktabat-Abee-Saaliḥ scheme), used as the
+# pronunciation aid under the tashkeel card. Only this scheme is implemented:
+# emphatics are dotted (ṣ ḍ ṭ ḥ), DHaa is the dH digraph, long vowels double
+# (aa/ee/oo), and the article folds into sun letters (Ash-Shams, Aṣ-Ṣalaah).
+TRANS_LETTERS = {
+    "ب": "b", "ت": "t", "ث": "th", "ج": "j", "ح": "ḥ", "خ": "kh", "د": "d",
+    "ذ": "dh", "ر": "r", "ز": "z", "س": "s", "ش": "sh", "ص": "ṣ", "ض": "ḍ",
+    "ط": "ṭ", "ظ": "dH", "ع": "'", "غ": "gh", "ف": "f", "ق": "q", "ك": "k",
+    "ل": "l", "م": "m", "ن": "n", "ه": "h",
+}
+SUN_LETTERS = {
+    "ت": "t", "ث": "th", "د": "d", "ذ": "dh", "ر": "r", "ز": "z", "س": "s",
+    "ش": "sh", "ص": "ṣ", "ض": "ḍ", "ط": "ṭ", "ظ": "dH", "ل": "l", "ن": "n",
+}
+SHORT_VOWELS = {"a", "u", "i", "an", "un", "in", "aa", "ee", "oo", "Aa"}
+MARKS = set(SHORT_VOWELS) | {"\u0651", "\u0652", "\u0670", "\u0640"}
+
+
+def _next_is_vowel(chars, index):
+    for later in chars[index + 1:]:
+        if later in MARKS:
+            return later in SHORT_VOWELS
+        return False
+    return False
+
+
+def _word_letters(word):
+    chars = [c for c in word if c != "\u0640"]
+    out = []
+    for index, ch in enumerate(chars):
+        if ch == "\u0651":
+            # Shaddah doubles the consonant itself, never the vowel after it.
+            spot = len(out) - 1
+            while spot >= 0 and out[spot] in VOWELS:
+                spot -= 1
+            if spot >= 0:
+                out.insert(spot, out[spot])
+            continue
+        if ch in SHORT_VOWELS:
+            out.append(SHORT_VOWELS[ch])
+            continue
+        if ch == "\u0652":
+            continue
+        if ch == "\u0670":
+            if out and out[-1] == "a":
+                out[-1] = "aa"
+            else:
+                out.append("aa")
+            continue
+        if ch == "ا":
+            if out and out[-1] == "a":
+                out[-1] = "aa"
+            else:
+                out.append("a")
+            continue
+        if ch == "ى":
+            out.append("aa")
+            continue
+        if ch == "و":
+            if out and out[-1] == "u":
+                out[-1] = "oo"
+            else:
+                out.append("w")
+            continue
+        if ch == "ي":
+            if out and out[-1] == "i":
+                out[-1] = "ee"
+            else:
+                out.append("y")
+            continue
+        if ch == "ة":
+            out.append("at" if _next_is_vowel(chars, index) else "ah")
+            continue
+        if ch == "ء":
+            out.append("'")
+            continue
+        if ch == "أ":
+            out.append("a")
+            continue
+        if ch == "إ":
+            out.append("i")
+            continue
+        if ch == "آ":
+            out.append("Aa")
+            continue
+        if ch == "ؤ":
+            out.append("u")
+            continue
+        if ch == "ئ":
+            out.append("i")
+            continue
+        out.append(TRANS_LETTERS.get(ch, ""))
+    return "".join(out)
+
+
+def _translit_word(word, next_word):
+    bare = "".join(ch for ch in word if ch not in TRANSLIT_MARKS)
+    if not bare:
+        return word
+
+    body_word = word
+    article = bare.startswith("ال") and len(bare) > 2
+    if article:
+        removed = 0
+        kept = []
+        for ch in word:
+            if removed < 2 and ch in ("ا", "ل"):
+                removed += 1
+                continue
+            kept.append(ch)
+        body_word = "".join(kept).replace("\u0651", "", 1) if bare[2] in SUN_LETTERS else "".join(kept)
+
+    # Case vowels stay: the -u of As-Salaamu is pronounced, so the aid keeps it.
+    rendered = _word_letters(body_word)
+    if not rendered:
+        return bare
+
+    if article:
+        tail = rendered[0].upper() + rendered[1:]
+        if bare[2] in SUN_LETTERS:
+            return "A" + SUN_LETTERS[bare[2]] + "-" + tail
+        return "Al-" + tail
+
+    if bare.endswith("ة") and next_word is not None:
+        if "".join(ch for ch in next_word if ch not in TRANSLIT_MARKS).startswith("ال") and rendered.endswith("ah"):
+            rendered = rendered[:-2] + "at"
+    return rendered
+
+
+def transliterate(text):
+    words = text.split(" ")
+    out = []
+    for index, word in enumerate(words):
+        if not word.strip():
+            out.append(word)
+            continue
+        nxt = None
+        for later in words[index + 1:]:
+            if later.strip():
+                nxt = later
+                break
+        out.append(_translit_word(word, nxt))
+    result = " ".join(out)
+    return result.replace("  ", " ").strip()
+
+
 def respond(payload):
     sys.stdout.write(json.dumps(payload, ensure_ascii=False) + "\n")
     sys.stdout.flush()
@@ -235,6 +381,10 @@ def main():
                 raise ValueError("text must be a string")
             if len(text) > MAX_CHARS:
                 text = text[:MAX_CHARS]
+
+            if cmd == "translit":
+                respond({"id": req.get("id"), "ok": True, "text": transliterate(text)})
+                continue
 
             if cmd == "pinyin":
                 if pinyin_engine is None:

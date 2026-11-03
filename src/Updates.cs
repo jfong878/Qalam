@@ -103,7 +103,28 @@ namespace Qalam
                     return;
                 }
 
-                UpdateInfo update = await FindUpdateAsync(config.UpdateUrl).ConfigureAwait(false);
+                UpdateInfo update = null;
+                Exception feedError = null;
+                try
+                {
+                    update = await FindUpdateAsync(config.UpdateUrl).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    feedError = ex;
+                }
+                if (feedError != null)
+                {
+                    // A retired feed answers 404 forever. Fall back to the current
+                    // feed once and remember it, so Check for updates keeps working
+                    // on installs the setup never migrated.
+                    if ((config.UpdateUrl ?? "").IndexOf("qalam-releases", StringComparison.OrdinalIgnoreCase) < 0)
+                        throw feedError;
+                    Logger.Write("retired update feed: " + feedError.Message);
+                    config.UpdateUrl = Config.DefaultUpdateUrl;
+                    try { config.Save(); } catch { }
+                    update = await FindUpdateAsync(config.UpdateUrl).ConfigureAwait(false);
+                }
                 if (update == null)
                 {
                     if (manual) ShowMessage("Qalam " + CurrentVersion + " is up to date.", "Qalam update", MessageBoxImage.Information);
