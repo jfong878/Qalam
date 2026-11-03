@@ -167,7 +167,7 @@ def apply_lahja(text, lahja):
             # Every lahja drops the case ending; Fuṣḥā keeps it.
             core = CASE_ENDING.sub("", core)
         pieces.append(prefix + core + suffix)
-    return " ".join(pieces)
+    return _vowel_repair(" ".join(pieces))
 
 
 # Aboo Saalih transliteration (Maktabat-Abee-Saaliḥ scheme), used as the
@@ -354,6 +354,40 @@ def _translit_word(word, next_word, glide, at_start):
     return particle + rendered + taa
 
 
+VOWEL_MARKS = set(SHORT_VOWELS) | {"ْ", "ّ", "ٰ"}
+
+
+def _vowel_repair(text):
+    """Give an unvocalized word enough vowels to be pronounceable.
+
+    Colloquial words Mishkal cannot vocalize arrive bare, so بخلص would
+    otherwise read bkhlṣ. Insert a short a between consonant clusters; the
+    first cluster of a word takes i, as in bikhalliṣ.
+    """
+    pieces = []
+    for token in text.split(" "):
+        if not token or any(ch in VOWEL_MARKS for ch in token):
+            pieces.append(token)
+            continue
+        letters = [ch for ch in token if ch not in PUNCTUATION]
+        if len(letters) < 3:
+            pieces.append(token)
+            continue
+        out = []
+        run = 0
+        for ch in token:
+            if ch in PUNCTUATION:
+                out.append(ch)
+                continue
+            run += 1
+            out.append(ch)
+            if run >= 2:
+                out.append("َ")
+                run = 0
+        pieces.append("".join(out))
+    return " ".join(pieces)
+
+
 def transliterate(text):
     words = text.split(" ")
     out = []
@@ -447,8 +481,16 @@ def main():
             if len(text) > MAX_CHARS:
                 text = text[:MAX_CHARS]
 
+            lahja = req.get("lahja") or "fusha"
+            if not isinstance(lahja, str):
+                lahja = "fusha"
+            lahja = lahja.strip().lower()
+
             if cmd == "translit":
-                respond({"id": req.get("id"), "ok": True, "text": transliterate(text)})
+                if vocalizer is None:
+                    raise RuntimeError("mishkal import failed: %s" % mishkal_error)
+                spoken = apply_lahja(vocalizer.tashkeel(text), lahja)
+                respond({"id": req.get("id"), "ok": True, "text": transliterate(spoken)})
                 continue
 
             if cmd == "pinyin":
@@ -461,10 +503,7 @@ def main():
 
             if vocalizer is None:
                 raise RuntimeError("mishkal import failed: %s" % mishkal_error)
-            lahja = req.get("lahja") or "fusha"
-            if not isinstance(lahja, str):
-                lahja = "fusha"
-            vocalized = apply_lahja(vocalizer.tashkeel(text), lahja.strip().lower())
+            vocalized = apply_lahja(vocalizer.tashkeel(text), lahja)
             respond({"id": req.get("id"), "ok": True, "text": clean_output(vocalized)})
         except Exception:
             respond(
