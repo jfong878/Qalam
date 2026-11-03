@@ -568,6 +568,24 @@ def _bare_words(text):
     return ["".join(ch for ch in w if ch not in TRANSLIT_MARKS) for w in text.split(" ")]
 
 
+def _vocalized_share(text):
+    letters = 0
+    marks = 0
+    for ch in text:
+        if ch in TRANSLIT_MARKS:
+            marks += 1
+        elif "ء" <= ch <= "ي":
+            letters += 1
+    return marks / max(1, letters)
+
+
+def _voice(text, vocalizer):
+    """Only vocalize what the writer left bare."""
+    if _vocalized_share(text) >= 0.5:
+        return text
+    return vocalizer.tashkeel(text)
+
+
 def transliterate(text):
     words = [w for w in text.split(" ") if w.strip()]
     bares = _bare_words(" ".join(words))
@@ -688,7 +706,10 @@ def main():
             if cmd == "translit":
                 if vocalizer is None:
                     raise RuntimeError("mishkal import failed: %s" % mishkal_error)
-                spoken = apply_lahja(apply_fixups(vocalizer.tashkeel(text), text), lahja)
+                # Text that already carries harakaat keeps its own reading: a
+                # second pass invents i'raab (bitakhalluṣi, ish-Shughli) that
+                # the writer never wrote, and Fuṣḥā has no Lahjah glide for it.
+                spoken = apply_lahja(apply_fixups(_voice(text, vocalizer), text), lahja)
                 respond({"id": req.get("id"), "ok": True, "text": transliterate(spoken)})
                 continue
 

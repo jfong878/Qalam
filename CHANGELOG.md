@@ -52,6 +52,10 @@ The Transliteration line now follows the pronunciation register you chose, so a 
 
 Unvocalized input is read by context: a bare ان with no shadda is the conditional In, not anna, so ان شاء الله بعد بخلص من الشغل اليوم becomes In Shaa' Allaah ba'd bakhalliṣ min ash-Shughl il-Yawm. Formulae such as In Shaa' Allaah, Bismillaah, Al-Ḥamdu lillaah, As-Salaamu 'alaykum, Maa Shaa' Allaah, Subḥaan Allaah, Allaahu Akbar and Laa ilaaha illaa Allaah keep their Fuṣḥā shape in every register; a preposition keeps the plain article after it (min ash-shughul) while the genitive i still carries onto a following article (ash-Shughl il-Yawm).
 
+## 1.0.13 — 2026-11-03
+
+Text that already carries harakaat is no longer re-vocalized, so Fuṣḥā stops inventing i'raab the writer never wrote (bitakhalluṣi ish-Shughli → bitakhalluṣ ash-Shughl).
+
 ## 1.0.12 — 2026-11-03
 
 Fixes the alif maqṣūrah (mataa, not mataaa), a word-final hamza (btabda'), and the article after a consonant-final word (ash-Shughl, not ish-Shughl). Sudanese وبتخلص reads wa bitkhalliṣ, and the per-register tables cover Egyptian, Levantine, Gulf, Iraqi and Moroccan.
