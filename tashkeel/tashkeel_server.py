@@ -533,6 +533,7 @@ def transliterate(text):
     bares = _bare_words(" ".join(words))
     out = []
     glide = None
+    genitive = False
     index = 0
     while index < len(words):
         matched = False
@@ -556,11 +557,14 @@ def transliterate(text):
         if governs:
             glide = "a"
         elif rendered.endswith("at"):
-            glide = "u"
+            # A noun governed by a preposition is genitive, so its i carries
+            # onto the following article: al-Lughat il-'Arabeeyah.
+            glide = "i" if genitive else "u"
         elif rendered[-1:] in ("u", "i", "a"):
             glide = rendered[-1]
         else:
             glide = "i"
+        genitive = governs
         index += 1
     result = " ".join(out).replace("  ", " ").strip()
     if result:
