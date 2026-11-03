@@ -21,18 +21,28 @@ $concordanceDest = Join-Path $dest 'concordance'
 # An existing virtual environment is enough on updates; Python is not required then.
 $venvPython = Join-Path $tashkeelDest '.venv\Scripts\python.exe'
 $systemPython = $null
+$pythonArgs = @()
 if (-not (Test-Path -LiteralPath $venvPython)) {
-    $systemPython = (Get-Command python.exe -ErrorAction SilentlyContinue).Source
-    if ($systemPython) {
-        $pythonInfo = Get-Item -LiteralPath $systemPython -ErrorAction SilentlyContinue
-        if (-not $pythonInfo -or $pythonInfo.Length -eq 0) { $systemPython = $null }
-    }
-    if ($systemPython) {
-        & $systemPython --version 2>$null | Out-Null
-        if ($LASTEXITCODE -ne 0) { $systemPython = $null }
+    # The Windows Store aliases in WindowsApps are zero-byte stubs that still
+    # forward to a real interpreter, so each candidate is run rather than
+    # judged by its size. A `py -3` fallback covers installs with no python on
+    # PATH at all.
+    foreach ($candidate in @(
+        @{ Exe = 'python.exe'; Args = @() },
+        @{ Exe = 'python3.exe'; Args = @() },
+        @{ Exe = 'py.exe'; Args = @('-3') })) {
+        $found = Get-Command $candidate.Exe -ErrorAction SilentlyContinue
+        if (-not $found -or -not $found.Source) { continue }
+        $probeArgs = @($candidate.Args) + @('-c', 'import sys; print(sys.version_info[0])')
+        $major = (& $found.Source @probeArgs 2>$null) -join ''
+        if ($LASTEXITCODE -eq 0 -and $major.Trim() -eq '3') {
+            $systemPython = $found.Source
+            $pythonArgs = @($candidate.Args)
+            break
+        }
     }
     if (-not $systemPython) {
-        throw 'Python 3 is required for offline tashkeel. Install Python and re-run this script.'
+        throw 'Python 3 is required for offline tashkeel. Install Python 3 and run the installer again.'
     }
 }
 
@@ -115,7 +125,7 @@ if (Test-Path -LiteralPath $concordanceSource) {
 
 if (-not (Test-Path -LiteralPath $venvPython)) {
     Write-Host "Creating tashkeel virtual environment in $tashkeelDest\.venv ..."
-    & $systemPython -m venv (Join-Path $tashkeelDest '.venv')
+    & $systemPython @pythonArgs -m venv (Join-Path $tashkeelDest '.venv')
     if ($LASTEXITCODE -ne 0) { throw "python -m venv failed with exit code $LASTEXITCODE" }
 }
 
