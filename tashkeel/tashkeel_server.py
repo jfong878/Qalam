@@ -187,6 +187,12 @@ SUN_LETTERS = {
 VOWELS = {"a", "u", "i", "an", "un", "in", "aa", "ee", "oo", "Aa"}
 
 
+SHORT_VOWELS = {
+    "َ": "a", "ُ": "u", "ِ": "i",
+    "ً": "an", "ٌ": "un", "ٍ": "in",
+}
+
+
 def _next_is_vowel(chars, index):
     for later in chars[index + 1:]:
         if later in TRANSLIT_MARKS:
