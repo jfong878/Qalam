@@ -269,6 +269,13 @@ def _word_letters(word):
     return "".join(out)
 
 
+def _cap(text):
+    for index, ch in enumerate(text):
+        if ch.isalpha():
+            return text[:index] + ch.upper() + text[index + 1:]
+    return text
+
+
 def _translit_word(word, next_word, glide, at_start):
     bare = "".join(ch for ch in word if ch not in TRANSLIT_MARKS)
     if not bare:
@@ -321,7 +328,7 @@ def _translit_word(word, next_word, glide, at_start):
         if not rendered:
             return particle + bare + taa
         first = bare[2]
-        tail = rendered[0].upper() + rendered[1:] + taa
+        tail = _cap(rendered) + taa
         letter = SUN_LETTERS[first] if first in SUN_LETTERS else "l"
         if particle:
             if next_word is None and tail[-1:] in ("u", "i", "a"):
@@ -333,6 +340,10 @@ def _translit_word(word, next_word, glide, at_start):
             return glide + letter + "-" + tail
         return ("A" if at_start else "a") + letter + "-" + tail
 
+    if next_word is None and not rendered.endswith(("aa", "ee", "oo")):
+        # Pause form: a final short case vowel is not pronounced.
+        if rendered[-1:] in ("u", "i", "a"):
+            rendered = rendered[:-1]
     return particle + rendered + taa
 
 
