@@ -290,7 +290,11 @@ def _next_is_vowel(chars, index):
 def _word_letters(word):
     chars = [c for c in word if c != "\u0640"]
     out = []
+    skipping = False
     for index, ch in enumerate(chars):
+        if skipping:
+            skipping = False
+            continue
         if ch == "\u0651":
             # Shaddah doubles the consonant itself, never the vowel after it.
             spot = len(out) - 1
@@ -326,6 +330,13 @@ def _word_letters(word):
                 out.append("w")
             continue
         if ch == "ي":
+            if index + 1 < len(chars) and chars[index + 1] == "ّ":
+                # Nisbah yaa: the long i plus a geminate yaa, written -eey.
+                if out and out[-1] == "i":
+                    out.pop()
+                out.append("eey")
+                skipping = True
+                continue
             if out and out[-1] == "i":
                 out[-1] = "ee"
             else:
@@ -336,14 +347,13 @@ def _word_letters(word):
         if ch == "ء":
             out.append("'")
             continue
-        if ch == "أ":
-            out.append("a")
-            continue
-        if ch == "إ":
-            out.append("i")
-            continue
-        if ch == "آ":
-            out.append("Aa")
+        if ch in ("أ", "إ", "آ"):
+            if index == 0:
+                # Word-initial hamza is not written; its vowel follows.
+                if ch == "آ":
+                    out.append("aa")
+                continue
+            out.append({"أ": "a", "إ": "i", "آ": "Aa"}[ch])
             continue
         if ch == "ؤ":
             out.append("u")
@@ -420,10 +430,11 @@ def _translit_word(word, next_word, glide, at_start):
                 break
         # The long alif already supplies the a of -ah / -at.
         long_a = rendered.endswith("a")
-        if next_word is None:
+        bare_next = "" if next_word is None else "".join(ch for ch in next_word if ch not in TRANSLIT_MARKS)
+        joins = next_word is not None and (bare_next.startswith("ال") or bare_next[:1] in ("و", "ف"))
+        if not joins:
             taa = "h" if long_a else "ah"
         else:
-            bare_next = "".join(ch for ch in next_word if ch not in TRANSLIT_MARKS)
             base = "t" if long_a else "at"
             taa = base + vowel if bare_next[:1] in ("و", "ف") else base
 
