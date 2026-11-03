@@ -182,7 +182,7 @@ SUN_LETTERS = {
     "ت": "t", "ث": "th", "د": "d", "ذ": "dh", "ر": "r", "ز": "z", "س": "s",
     "ش": "sh", "ص": "ṣ", "ض": "ḍ", "ط": "ṭ", "ظ": "dH", "ل": "l", "ن": "n",
 }
-SHORT_TRANSLIT_MARKS = set(SHORT_VOWELS) | {"\u0651", "\u0652", "\u0670", "\u0640"}
+TRANSLIT_MARKS = set("ًٌٍَُِّْٰـ")
 VOWELS = {"a", "u", "i", "an", "un", "in", "aa", "ee", "oo", "Aa"}
 MARKS = set(SHORT_VOWELS) | {"\u0651", "\u0652", "\u0670", "\u0640"}
 
@@ -263,10 +263,17 @@ def _word_letters(word):
     return "".join(out)
 
 
-def _translit_word(word, next_word):
+def _translit_word(word, next_word, glide, at_start):
     bare = "".join(ch for ch in word if ch not in TRANSLIT_MARKS)
     if not bare:
         return word
+
+    particle = ""
+    if len(bare) > 3 and bare[0] in ("و", "ف") and bare.startswith("ال", 1):
+        particle = "wa" if bare[0] == "و" else "fa"
+        word = word[1:]
+        bare = bare[1:]
+        glide = "a"
 
     body_word = word
     article = bare.startswith("ال") and len(bare) > 2
@@ -278,18 +285,28 @@ def _translit_word(word, next_word):
                 removed += 1
                 continue
             kept.append(ch)
-        body_word = "".join(kept).replace("\u0651", "", 1) if bare[2] in SUN_LETTERS else "".join(kept)
+        body_word = "".join(kept)
+        if bare[2] in SUN_LETTERS:
+            # The shaddah on a sun letter is the assimilation mark, not a
+            # doubled consonant of the word itself.
+            body_word = body_word.replace("\u0651", "", 1)
 
     # Case vowels stay: the -u of As-Salaamu is pronounced, so the aid keeps it.
     rendered = _word_letters(body_word)
     if not rendered:
-        return bare
+        return particle + bare
 
     if article:
+        first = bare[2]
         tail = rendered[0].upper() + rendered[1:]
-        if bare[2] in SUN_LETTERS:
-            return "A" + SUN_LETTERS[bare[2]] + "-" + tail
-        return "Al-" + tail
+        letter = SUN_LETTERS[first] if first in SUN_LETTERS else "l"
+        if glide in ("u", "i", "a"):
+            # Idaafah: the article takes the case vowel of the mudaaf head
+            # (Aṣ-Ṣalaat ul-Jamaa'ah, Manhaj Rajul id-Dawlah, Manhaj Ṭaalib il-'Ilm).
+            prefix = glide + letter + "-"
+        else:
+            prefix = ("A" if at_start else "a") + letter + "-"
+        return particle + prefix + tail
 
     if bare.endswith("ة"):
         vowel = ""
@@ -307,12 +324,13 @@ def _translit_word(word, next_word):
                 rendered += "at" + vowel
             else:
                 rendered += "at"
-    return rendered
+    return particle + rendered
 
 
 def transliterate(text):
     words = text.split(" ")
     out = []
+    glide = None
     for index, word in enumerate(words):
         if not word.strip():
             out.append(word)
@@ -322,9 +340,16 @@ def transliterate(text):
             if later.strip():
                 nxt = later
                 break
-        out.append(_translit_word(word, nxt))
-    result = " ".join(out)
-    return result.replace("  ", " ").strip()
+        rendered = _translit_word(word, nxt, glide, glide is None)
+        out.append(rendered)
+        if rendered.endswith("at"):
+            glide = "u"
+        elif rendered[-1:] in ("u", "i", "a"):
+            glide = rendered[-1]
+        else:
+            # A construct chain with no visible ending reads as majroor.
+            glide = "i"
+    return " ".join(out).replace("  ", " ").strip()
 
 
 def respond(payload):
