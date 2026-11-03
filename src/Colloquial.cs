@@ -49,6 +49,100 @@ namespace Qalam
         public int WordCount;
     }
 
+    // The regional dialect an expression belongs to. A phrase can belong to
+    // several at once (ماشي is Sudanese, Gulf, and Egyptian), so entries carry a
+    // set rather than a single value.
+    internal enum Lahja
+    {
+        Msa,
+        Egyptian,
+        Levantine,
+        Gulf,
+        Sudanese,
+        Iraqi,
+        Yemeni,
+        Hijazi,
+        Moroccan,
+        Tunisian,
+        Algerian,
+        Libyan
+    }
+
+    internal static class LahjaInfo
+    {
+        private static readonly Lahja[] All = new Lahja[]
+        {
+            Lahja.Msa, Lahja.Egyptian, Lahja.Levantine, Lahja.Gulf, Lahja.Sudanese,
+            Lahja.Iraqi, Lahja.Yemeni, Lahja.Hijazi, Lahja.Moroccan,
+            Lahja.Tunisian, Lahja.Algerian, Lahja.Libyan
+        };
+
+        public static string Name(Lahja lahja)
+        {
+            switch (lahja)
+            {
+                case Lahja.Msa: return "MSA";
+                case Lahja.Egyptian: return "Egyptian";
+                case Lahja.Levantine: return "Levantine";
+                case Lahja.Gulf: return "Gulf";
+                case Lahja.Sudanese: return "Sudanese";
+                case Lahja.Iraqi: return "Iraqi";
+                case Lahja.Yemeni: return "Yemeni";
+                case Lahja.Hijazi: return "Hijazi";
+                case Lahja.Moroccan: return "Moroccan";
+                case Lahja.Tunisian: return "Tunisian";
+                case Lahja.Algerian: return "Algerian";
+                case Lahja.Libyan: return "Libyan";
+                default: return "";
+            }
+        }
+
+        public static string Label(Lahja[] lahjaat)
+        {
+            if (lahjaat == null || lahjaat.Length == 0) return "";
+            StringBuilder text = new StringBuilder();
+            for (int i = 0; i < lahjaat.Length; i++)
+            {
+                string name = Name(lahjaat[i]);
+                if (name.Length == 0) continue;
+                if (text.Length > 0) text.Append('/');
+                text.Append(name);
+            }
+            return text.ToString();
+        }
+
+        // Deduplicates and sorts into enum order so a label reads the same way
+        // whatever order a caller listed the dialects in.
+        public static Lahja[] Normalize(Lahja[] lahjaat)
+        {
+            List<Lahja> ordered = new List<Lahja>();
+            foreach (Lahja lahja in All)
+                if (lahjaat != null && Array.IndexOf(lahjaat, lahja) >= 0) ordered.Add(lahja);
+            return ordered.ToArray();
+        }
+
+        // Notes already open with the dialects they cover ("Levantine/Gulf; ..."),
+        // so existing entries get their labels from that one sentence instead of
+        // a second table that could drift out of sync with the prose.
+        public static Lahja[] ParseNote(string note)
+        {
+            string head = note ?? "";
+            int cut = head.IndexOf(';');
+            if (cut < 0) cut = head.IndexOf('.');
+            if (cut >= 0) head = head.Substring(0, cut);
+            if (head.Length == 0) return new Lahja[0];
+
+            List<Lahja> found = new List<Lahja>();
+            foreach (Lahja lahja in All)
+            {
+                string name = Name(lahja);
+                if (name.Length == 0) continue;
+                if (head.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0) found.Add(lahja);
+            }
+            return found.ToArray();
+        }
+    }
+
     internal sealed class ArabicColloquialEntry
     {
         public string Arabic;
@@ -57,9 +151,11 @@ namespace Qalam
         public string[] ExampleArabic;
         public string[] ExampleEnglish;
         public string[] ArabicWords;
+        public Lahja[] Lahjaat;
+        public string LahjaLabel;
 
         public ArabicColloquialEntry(string arabic, string english, string note,
-            string[] exampleArabic, string[] exampleEnglish)
+            string[] exampleArabic, string[] exampleEnglish, Lahja[] lahjaat)
         {
             Arabic = arabic;
             English = english;
@@ -67,6 +163,8 @@ namespace Qalam
             ExampleArabic = exampleArabic ?? new string[0];
             ExampleEnglish = exampleEnglish ?? new string[0];
             ArabicWords = Colloquial.Fold(arabic).Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            Lahjaat = LahjaInfo.Normalize(lahjaat != null && lahjaat.Length > 0 ? lahjaat : LahjaInfo.ParseNote(note));
+            LahjaLabel = LahjaInfo.Label(Lahjaat);
         }
     }
 
@@ -247,6 +345,31 @@ namespace Qalam
             return false;
         }
 
+        // Self-test hook: every Arabic entry must name at least one lahja so the
+        // table cannot quietly grow unlabelled phrases again.
+        public static int UnlabelledArabicEntries
+        {
+            get
+            {
+                int count = 0;
+                foreach (ArabicColloquialEntry entry in ArabicEntries)
+                    if (entry.Lahjaat.Length == 0) count++;
+                return count;
+            }
+        }
+
+        // Every lahja the matched phrasebook entries are used in, e.g.
+        // "Egyptian/Gulf/Sudanese" for ماشي. Empty when nothing matched.
+        public static string LahjaLabelFor(string text, string sourceLanguage)
+        {
+            if (NormalizeCode(sourceLanguage) != "ar") return "";
+            List<Lahja> found = new List<Lahja>();
+            foreach (ArabicMatch match in FindArabicMatches(text))
+                foreach (Lahja lahja in match.Entry.Lahjaat)
+                    if (!found.Contains(lahja)) found.Add(lahja);
+            return LahjaInfo.Label(LahjaInfo.Normalize(found.ToArray()));
+        }
+
         public static List<ExamplePair> ExamplesFor(string text, string sourceLanguage, string targetLanguage, int max)
         {
             List<ExamplePair> result = new List<ExamplePair>();
@@ -298,7 +421,11 @@ namespace Qalam
             {
                 foreach (ArabicMatch match in FindArabicMatches(text))
                 {
+                    // The lahja rides along with the gloss so the model knows which
+                    // dialect the expression belongs to, and the popup can show it.
                     string hint = match.Entry.Arabic + " = " + match.Entry.English;
+                    if (!string.IsNullOrEmpty(match.Entry.LahjaLabel))
+                        hint += " [" + match.Entry.LahjaLabel + "]";
                     if (!hints.Contains(hint)) hints.Add(hint);
                 }
                 return hints;
@@ -1412,7 +1539,7 @@ namespace Qalam
                 new string[] { "معلش، حصل خير.", "حصل خير، متقلقش." },
                 new string[] { "Never mind, it turned out fine.", "It turned out fine, don't worry." });
 
-            AddArabic(entries, "يلا", "come on", "Egyptian/Levantine; also 'let's go'.",
+            AddArabic(entries, "يلا", "come on", "Egyptian/Levantine/Sudanese; also 'let's go'.",
                 new string[] { "يلا بينا.", "يلا، متأخرناش." },
                 new string[] { "Come on, let's go.", "Come on, we're not late." });
 
@@ -1502,7 +1629,7 @@ namespace Qalam
                 new string[] { "وش هذا الشي؟", "وش هذا الكلام؟" },
                 new string[] { "What's this thing?", "What's this talk?" });
 
-            AddArabic(entries, "خلاص", "enough", "Gulf/MSA; also 'it's done'.",
+            AddArabic(entries, "خلاص", "enough", "Gulf/Sudanese/MSA; also 'it's done'.",
                 new string[] { "خلاص، لا تكمل.", "خلاص انتهى الموضوع." },
                 new string[] { "Enough, don't continue.", "Enough, the matter is over." });
 
@@ -1547,7 +1674,7 @@ namespace Qalam
                 new string[] { "كيفاش دخلتي؟", "كيفاش عرفتي؟" },
                 new string[] { "How did you get in?", "How did you know?" });
 
-            AddArabic(entries, "شنو", "what?", "Moroccan; also 'what is it?'.",
+            AddArabic(entries, "شنو", "what?", "Moroccan/Sudanese/Iraqi; also 'what is it?'.",
                 new string[] { "شنو بغيتي؟", "شنو هاد؟" },
                 new string[] { "What do you want?", "What's this?" });
 
@@ -1558,6 +1685,227 @@ namespace Qalam
             AddArabic(entries, "خويا", "brother", "Moroccan; informal address for a friend.",
                 new string[] { "كيفاش حالك يا خويا؟", "شكرًا يا خويا." },
                 new string[] { "How are you, brother?", "Thanks, brother." });
+
+            // Sudanese Arabic, plus the Gulf and Egyptian phrases it shares.
+            AddArabic(entries, "ماشي", "going", "Sudanese/Gulf; present participle 'going'. Egyptian and Levantine use it for 'okay'.",
+                new string[] { "أنا ماشي البيت.", "أنت ماشي الجيم قريب؟" },
+                new string[] { "I'm going home.", "Are you going to the gym soon?" },
+                Lahja.Sudanese, Lahja.Gulf);
+
+            AddArabic(entries, "بعد بخلص من الشغل", "after I finish work", "Sudanese/Egyptian/Gulf; بعد here means 'later, afterwards', not MSA 'after'.",
+                new string[] { "إن شاء الله بعد بخلص من الشغل اليوم.", "بعد بخلص من الشغل بجيك." },
+                new string[] { "God willing, after I finish work today.", "After I finish work, I'll come to you." },
+                Lahja.Sudanese, Lahja.Egyptian, Lahja.Gulf);
+
+            AddArabic(entries, "قريب", "soon", "Sudanese/Gulf; also 'near'.",
+                new string[] { "قريب نتلاقى.", "أنا جاي قريب." },
+                new string[] { "We'll meet soon.", "I'm coming soon." },
+                Lahja.Sudanese, Lahja.Gulf);
+
+            AddArabic(entries, "هسي", "now", "Sudanese; 'right now'.",
+                new string[] { "هسي بجي.", "هسي فهمت." },
+                new string[] { "I'm coming now.", "Now I understand." },
+                Lahja.Sudanese);
+
+            AddArabic(entries, "زول", "guy", "Sudanese; a person, 'guy' or 'man'.",
+                new string[] { "الزول ده صاحبي.", "الزول ده وين؟" },
+                new string[] { "This guy is my friend.", "Where is this guy?" },
+                Lahja.Sudanese);
+
+            AddArabic(entries, "كيفنك", "how are you?", "Sudanese; informal greeting.",
+                new string[] { "كيفنك يا صاحبي؟", "كيفنك اليوم؟" },
+                new string[] { "How are you, my friend?", "How are you today?" },
+                Lahja.Sudanese);
+
+            AddArabic(entries, "الجيم", "the gym", "Sudanese/Gulf/Egyptian; loanword used across dialects.",
+                new string[] { "أنا ماشي الجيم.", "الجيم قريب من البيت." },
+                new string[] { "I'm going to the gym.", "The gym is close to home." },
+                Lahja.Sudanese, Lahja.Gulf, Lahja.Egyptian);
+
+            // Iraqi Arabic.
+            AddArabic(entries, "شكو ماكو", "what's up?", "Iraqi; everyday greeting, literally 'what is there?'.",
+                new string[] { "شكو ماكو يا صاحبي؟", "شكو ماكو اليوم؟" },
+                new string[] { "What's up, my friend?", "What's up today?" },
+                Lahja.Iraqi);
+
+            AddArabic(entries, "ماكو مشكلة", "no problem", "Iraqi; ماكو is 'there is none'.",
+                new string[] { "ماكو مشكلة، أنا معك.", "ماكو مشكلة، نلتقي غدًا." },
+                new string[] { "No problem, I'm with you.", "No problem, we'll meet tomorrow." },
+                Lahja.Iraqi);
+
+            AddArabic(entries, "هسة", "now", "Iraqi; also written هسا.",
+                new string[] { "هسة بجي.", "هسة فهمت." },
+                new string[] { "I'm coming now.", "Now I understand." },
+                Lahja.Iraqi);
+
+            AddArabic(entries, "خوش", "good", "Iraqi; 'good' or 'well done'.",
+                new string[] { "خوش شغل.", "هذا خوش شي." },
+                new string[] { "Good work.", "This is a good thing." },
+                Lahja.Iraqi);
+
+            AddArabic(entries, "هواية", "a lot", "Iraqi; also 'very'.",
+                new string[] { "أحبك هواية.", "الشغل هواية اليوم." },
+                new string[] { "I love you a lot.", "There's a lot of work today." },
+                Lahja.Iraqi);
+
+            // Yemeni Arabic.
+            AddArabic(entries, "ما شي مشكلة", "no problem", "Yemeni; ما شي is 'there is none'.",
+                new string[] { "ما شي مشكلة، أنا معك.", "ما شي مشكلة، خلصنا." },
+                new string[] { "No problem, I'm with you.", "No problem, we're done." },
+                Lahja.Yemeni);
+
+            AddArabic(entries, "حياك الله", "welcome", "Yemeni/Gulf/Hijazi/Sudanese; greeting or welcome.",
+                new string[] { "حياك الله يا صاحبي.", "حياك الله، تفضل." },
+                new string[] { "Welcome, my friend.", "Welcome, go ahead." },
+                Lahja.Yemeni, Lahja.Gulf, Lahja.Hijazi, Lahja.Sudanese);
+
+            // Hijazi Arabic.
+            AddArabic(entries, "إيش أخبارك", "how are you?", "Hijazi/Gulf; literally 'what's your news?'.",
+                new string[] { "إيش أخبارك يا صاحبي؟", "إيش أخبارك اليوم؟" },
+                new string[] { "How are you, my friend?", "How are you today?" },
+                Lahja.Hijazi, Lahja.Gulf);
+
+            AddArabic(entries, "دحين", "now", "Hijazi; 'right now'.",
+                new string[] { "دحين بجي.", "دحين فهمت." },
+                new string[] { "I'm coming now.", "Now I understand." },
+                Lahja.Hijazi);
+
+            AddArabic(entries, "أبغى", "I want", "Hijazi; also 'I would like'.",
+                new string[] { "أبغى أروح.", "أبغى هذا." },
+                new string[] { "I want to go.", "I want this." },
+                Lahja.Hijazi);
+
+            AddArabic(entries, "ما أدري", "I don't know", "Hijazi/Gulf; casual.",
+                new string[] { "ما أدري وش صار.", "ما أدري، والله." },
+                new string[] { "I don't know what happened.", "I don't know, I swear." },
+                Lahja.Hijazi, Lahja.Gulf);
+
+            AddArabic(entries, "كذا", "like this", "Hijazi/Gulf; 'thus' or 'in this way'.",
+                new string[] { "سوّها كذا.", "كذا أحسن." },
+                new string[] { "Do it like this.", "This way is better." },
+                Lahja.Hijazi, Lahja.Gulf);
+
+            AddArabic(entries, "زحمة", "crowded", "Hijazi/Gulf/Egyptian; also 'traffic'.",
+                new string[] { "الشارع زحمة اليوم.", "المكان زحمة." },
+                new string[] { "The street is crowded today.", "The place is crowded." },
+                Lahja.Hijazi, Lahja.Gulf, Lahja.Egyptian);
+
+            // Everyday Levantine, Egyptian, Gulf, and Moroccan additions.
+            AddArabic(entries, "هلق", "now", "Levantine; also written هلأ.",
+                new string[] { "هلق بجي.", "هلق فهمت." },
+                new string[] { "I'm coming now.", "Now I understand." },
+                Lahja.Levantine);
+
+            AddArabic(entries, "بدي", "I want", "Levantine; also 'I need'.",
+                new string[] { "بدي أروح.", "بدي هذا." },
+                new string[] { "I want to go.", "I want this." },
+                Lahja.Levantine);
+
+            AddArabic(entries, "عنجد", "really", "Levantine; 'seriously'.",
+                new string[] { "عنجد؟ ما بصدق.", "عنجد، هيك صار؟" },
+                new string[] { "Really? I don't believe it.", "For real, that's what happened?" },
+                Lahja.Levantine);
+
+            AddArabic(entries, "شوي", "a little", "Levantine/Gulf; 'a bit'.",
+                new string[] { "استنى شوي.", "بحكي شوي عربي." },
+                new string[] { "Wait a little.", "I speak a little Arabic." },
+                Lahja.Levantine, Lahja.Gulf);
+
+            AddArabic(entries, "يا خي", "brother", "Levantine; friendly address, literally 'O brother'.",
+                new string[] { "شكرًا يا خي.", "كيفك يا خي؟" },
+                new string[] { "Thanks, brother.", "How are you, brother?" },
+                Lahja.Levantine);
+
+            AddArabic(entries, "عايز", "I want", "Egyptian; also written عاوز.",
+                new string[] { "عايز أروح.", "عايز هذا." },
+                new string[] { "I want to go.", "I want this." },
+                Lahja.Egyptian);
+
+            AddArabic(entries, "أوي", "very", "Egyptian; intensifier after an adjective.",
+                new string[] { "ده غريب أوي.", "أنا تعبان أوي." },
+                new string[] { "This is very strange.", "I'm very tired." },
+                Lahja.Egyptian);
+
+            AddArabic(entries, "كمان", "also", "Egyptian/Levantine; 'too' or 'as well'.",
+                new string[] { "أنا كمان جاي.", "عايز ده كمان." },
+                new string[] { "I'm coming too.", "I want this as well." },
+                Lahja.Egyptian, Lahja.Levantine);
+
+            AddArabic(entries, "بص", "look", "Egyptian; attention-getter, 'look here'.",
+                new string[] { "بص، عندي فكرة.", "بص على ده." },
+                new string[] { "Look, I have an idea.", "Look at this." },
+                Lahja.Egyptian);
+
+            AddArabic(entries, "الحين", "now", "Gulf; 'right now'.",
+                new string[] { "الحين بجي.", "الحين فهمت." },
+                new string[] { "I'm coming now.", "Now I understand." },
+                Lahja.Gulf);
+
+            AddArabic(entries, "وش", "what", "Gulf/Hijazi; also 'what is'.",
+                new string[] { "وش تبي؟", "وش صار؟" },
+                new string[] { "What do you want?", "What happened?" },
+                Lahja.Gulf, Lahja.Hijazi);
+
+            AddArabic(entries, "أبا", "I want", "Gulf; also 'I would like'.",
+                new string[] { "أبا أروح.", "أبا هذا." },
+                new string[] { "I want to go.", "I want this." },
+                Lahja.Gulf);
+
+            AddArabic(entries, "بغيت", "I want", "Moroccan; also 'I would like'.",
+                new string[] { "بغيت نمشي.", "بغيت هذا." },
+                new string[] { "I want to go.", "I want this." },
+                Lahja.Moroccan);
+
+            AddArabic(entries, "شحال", "how much?", "Moroccan; asks a price or quantity.",
+                new string[] { "شحال هذا؟", "شحال الكيلو؟" },
+                new string[] { "How much is this?", "How much is a kilo?" },
+                Lahja.Moroccan);
+
+            AddArabic(entries, "فين", "where?", "Moroccan; also 'where is'.",
+                new string[] { "فين كاينة؟", "فين مشيت؟" },
+                new string[] { "Where is it?", "Where did you go?" },
+                Lahja.Moroccan);
+
+            AddArabic(entries, "بسلامة", "goodbye", "Moroccan; said on leaving.",
+                new string[] { "بسلامة، نلتقي غدًا.", "بسلامة يا خويا." },
+                new string[] { "Goodbye, we'll meet tomorrow.", "Goodbye, brother." },
+                Lahja.Moroccan);
+
+            // Tunisian, Algerian, and Libyan Arabic.
+            AddArabic(entries, "برشا", "a lot", "Tunisian; also 'very'.",
+                new string[] { "نحبك برشا.", "الخدمة برشا اليوم." },
+                new string[] { "I love you a lot.", "There's a lot of work today." },
+                Lahja.Tunisian);
+
+            AddArabic(entries, "باهي", "okay", "Tunisian/Libyan; 'good' or 'fine'.",
+                new string[] { "باهي، نمشي.", "باهي، أنا موافق." },
+                new string[] { "Okay, let's go.", "Okay, I agree." },
+                Lahja.Tunisian, Lahja.Libyan);
+
+            AddArabic(entries, "شكون", "who?", "Tunisian/Moroccan; asks who.",
+                new string[] { "شكون هذا؟", "شكون قال هذا؟" },
+                new string[] { "Who is this?", "Who said this?" },
+                Lahja.Tunisian, Lahja.Moroccan);
+
+            AddArabic(entries, "علاش", "why?", "Tunisian/Moroccan; asks why.",
+                new string[] { "علاش ما جيتش؟", "علاش هذا؟" },
+                new string[] { "Why didn't you come?", "Why this?" },
+                Lahja.Tunisian, Lahja.Moroccan);
+
+            AddArabic(entries, "واش", "what?", "Algerian/Moroccan; also 'is it that'.",
+                new string[] { "واش راك؟", "واش هذا؟" },
+                new string[] { "How are you?", "What is this?" },
+                Lahja.Algerian, Lahja.Moroccan);
+
+            AddArabic(entries, "هلبا", "a lot", "Libyan; also 'very'.",
+                new string[] { "نحبك هلبا.", "الخدمة هلبا اليوم." },
+                new string[] { "I love you a lot.", "There's a lot of work today." },
+                Lahja.Libyan);
+
+            AddArabic(entries, "نبي", "I want", "Libyan; also 'I would like'.",
+                new string[] { "نبي نمشي.", "نبي هذا." },
+                new string[] { "I want to go.", "I want this." },
+                Lahja.Libyan);
 
             // Shared MSA expressions that are common in dialect speech.
             AddArabic(entries, "يا سلام", "wow", "MSA; admiration or delight.",
@@ -1600,15 +1948,15 @@ namespace Qalam
                 new string[] { "بصراحة، لم يعجبني.", "بصراحة، أنت محق." },
                 new string[] { "Honestly, I didn't like it.", "Honestly, you're right." });
 
-            AddArabic(entries, "اخرس", "shut up", "Strong/rude imperative.",
+            AddArabic(entries, "اخرس", "shut up", "MSA; strong/rude imperative, understood across dialects.",
                 new string[] { "اخرس، لا أريد أن أسمعك.", "اخرسوا قليلًا." },
                 new string[] { "Shut up, I don't want to hear you.", "Shut up for a moment." });
 
-            AddArabic(entries, "يا حمار", "you idiot", "Insulting; literally 'O donkey'.",
+            AddArabic(entries, "يا حمار", "you idiot", "MSA; insulting, literally 'O donkey', used across dialects.",
                 new string[] { "يا حمار، انتبه!", "يا حمار، ده مش شغلك." },
                 new string[] { "You idiot, watch out!", "You idiot, that's not your business." });
 
-            AddArabic(entries, "يا غبي", "you idiot", "Insulting; literally 'O stupid one'.",
+            AddArabic(entries, "يا غبي", "you idiot", "MSA; insulting, literally 'O stupid one'.",
                 new string[] { "يا غبي، ده غلط.", "يا غبي، فكر قبل ما تتكلم." },
                 new string[] { "You idiot, that's wrong.", "You idiot, think before you speak." });
 
@@ -1731,7 +2079,7 @@ namespace Qalam
                 new string[] { "أبشر، راح أساعدك.", "أبشر يا طويل العمر." },
                 new string[] { "Consider it done, I'll help you.", "Consider it done, sir." });
 
-            AddArabic(entries, "عساك بخير", "hope you're well", "Gulf; concerned greeting.",
+            AddArabic(entries, "عساك بخير", "hope you're well", "Gulf/Yemeni; concerned greeting.",
                 new string[] { "عساك بخير يا خوي؟", "عساك بخير بعد السفر." },
                 new string[] { "Hope you're well, brother?", "Hope you're well after the trip." });
 
@@ -1803,9 +2151,9 @@ namespace Qalam
         }
 
         private static void AddArabic(List<ArabicColloquialEntry> entries, string arabic, string english,
-            string note, string[] exampleArabic, string[] exampleEnglish)
+            string note, string[] exampleArabic, string[] exampleEnglish, params Lahja[] lahjaat)
         {
-            entries.Add(new ArabicColloquialEntry(arabic, english, note, exampleArabic, exampleEnglish));
+            entries.Add(new ArabicColloquialEntry(arabic, english, note, exampleArabic, exampleEnglish, lahjaat));
         }
 
         private static HashSet<string> BuildArabicMarkers()

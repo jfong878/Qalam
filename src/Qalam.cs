@@ -4281,7 +4281,13 @@ namespace Qalam
                         new string[] { "\u0625\u0632\u064a\u0643", "How are you?" },
                         new string[] { "\u0625\u0650\u0632\u0650\u064a\u0643", "How are you?" },
                         new string[] { "\u0634\u0648 \u0631\u0627\u064a\u0643", "What do you think?" },
-                        new string[] { "\u0637\u064a\u0628", "Okay" }
+                        new string[] { "\u0637\u064a\u0628", "Okay" },
+                        new string[] { "\u0628\u0639\u062f \u0628\u062e\u0644\u0635 \u0645\u0646 \u0627\u0644\u0634\u063a\u0644", "after I finish work" },
+                        new string[] { "\u0643\u064a\u0641\u0646\u0643", "How are you?" },
+                        new string[] { "\u0647\u0633\u064a", "now" },
+                        new string[] { "\u0634\u0643\u0648 \u0645\u0627\u0643\u0648", "What's up" },
+                        new string[] { "\u062f\u062d\u064a\u0646", "now" },
+                        new string[] { "\u0628\u0631\u0634\u0627", "a lot" }
                     };
                     foreach (string[] check in phraseChecks)
                     {
@@ -4292,6 +4298,24 @@ namespace Qalam
                             phrase.Text.IndexOf(check[1], StringComparison.OrdinalIgnoreCase) < 0)
                             exitCode = 1;
                     }
+
+                    // Every Arabic phrasebook entry carries the lahja (dialect) it
+                    // belongs to, several when the phrase is shared.
+                    string sudaneseLahja = Colloquial.LahjaLabelFor(
+                        "\u0628\u0639\u062f \u0628\u062e\u0644\u0635 \u0645\u0646 \u0627\u0644\u0634\u063a\u0644", "ar");
+                    log.AppendLine("lahja_sudanese=" + sudaneseLahja);
+                    if (sudaneseLahja != "Egyptian/Gulf/Sudanese") exitCode = 1;
+
+                    string iraqiLahja = Colloquial.LahjaLabelFor("\u0634\u0643\u0648 \u0645\u0627\u0643\u0648", "ar");
+                    log.AppendLine("lahja_iraqi=" + iraqiLahja);
+                    if (iraqiLahja != "Iraqi") exitCode = 1;
+
+                    string hijaziLahja = Colloquial.LahjaLabelFor("\u062f\u062d\u064a\u0646", "ar");
+                    log.AppendLine("lahja_hijazi=" + hijaziLahja);
+                    if (hijaziLahja != "Hijazi") exitCode = 1;
+
+                    log.AppendLine("phrasebook_unlabelled=" + Colloquial.UnlabelledArabicEntries);
+                    if (Colloquial.UnlabelledArabicEntries != 0) exitCode = 1;
 
                     string[][] englishChecks = new string[][]
                     {

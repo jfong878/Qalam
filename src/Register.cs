@@ -195,12 +195,17 @@ namespace Qalam
             if (words.Length == 0) return 0;
 
             double value = 0;
+            int evidence = 0;
             RegisterLexicon lexicon = LexiconFor(language);
             if (lexicon != null)
             {
                 int markers = CountHits(words, norm, lexicon.Words, lexicon.Phrases, lexicon.Fragments,
                                         exclude);
-                if (markers > 0) value += Math.Min(MarkerCap, MarkerWeight * markers);
+                if (markers > 0)
+                {
+                    value += Math.Min(MarkerCap, MarkerWeight * markers);
+                    evidence += markers;
+                }
 
                 int formal = CountHits(words, norm, lexicon.FormalWords, lexicon.FormalPhrases,
                                         lexicon.FormalFragments, exclude);
@@ -214,10 +219,19 @@ namespace Qalam
             {
                 try
                 {
-                    if (Colloquial.FindMatches(text, code).Count > 0) value += CuratedBonus;
+                    if (Colloquial.FindMatches(text, code).Count > 0)
+                    {
+                        value += CuratedBonus;
+                        evidence++;
+                    }
                 }
                 catch { }
             }
+
+            // Structure can only amplify evidence, never manufacture it. Without
+            // this a short flat line scored 0.07 and every hit was "boosted",
+            // which tinted the whole result set instead of ordering it.
+            if (evidence == 0) return 0;
 
             if (words.Length >= 2 && words.Length <= 7) value += 0.04;
             else if (words.Length >= 20) value -= 0.10;
@@ -324,7 +338,7 @@ namespace Qalam
                         "i would like to", "excuse me", "good evening", "may i", "allow me");
 
             map["es"] = new RegisterLexicon()
-                .Add("joder", "mierda", "coño", "hostia", "ostia", "cabrón", "cabron", "tío", "tia",
+                .Add("joder", "mierda", "coño", "hostia", "ostia", "cabrón", "cabron", "tío",
                      "chaval", "chavala", "guay", "vale", "venga", "oye", "mira", "vamos", "anda",
                      "jope", "vaya", "menudo", "gilipollas", "imbécil", "idiota", "estúpido", "tonto",
                      "carajo", "cojones", "huevos", "leche", "cagüen", "ostras", "flipar", "mola",
@@ -342,7 +356,11 @@ namespace Qalam
                      "كتير", "هلق", "هلأ", "منيح", "بدي", "بدك", "رح", "يلا", "عنجد", "طيب",
                      "تمام", "ماشي", "زين", "هيك", "لك", "شو هاد", "شو رايك", "ولا يهمك", "يا رجل",
                      "والله", "ياخي", "يا خي", "مو", "مش", "هبل", "خرية", "كس", "شرموط", "حيوان",
-                     "غبي", "مجنون", "شو القصة", "على راسي", "ما في", "ما بدي")
+                     "غبي", "مجنون", "شو القصة", "على راسي", "ما في", "ما بدي",
+                     "هسي", "زول", "كيفنك", "بخلص", "أخلص", "شنو",
+                     "هسة", "شكو", "ماكو", "خوش", "هواية", "دحين", "إيش", "أبغى", "الحين",
+                     "عايز", "أوي", "هلق", "بدي", "عنجد", "برشا", "باهي", "واش", "هلبا", "نبي",
+                     "شكون", "علاش", "بغيت", "شحال", "زحمة", "ما أدري")
                 .Formal("حضرتك", "سيادتك", "الرجاء", "يرجى", "تفضلوا", "من فضلكم", "أرجو", "ارجو",
                         "السيد", "السيدة", "المحترم", "بناء على", "وفقا ل", "نود أن", "يرجى التكرم");
 
@@ -548,6 +566,21 @@ namespace Qalam
             lines.Add(string.Format("{0}  neutral en     value={1:0.00}",
                                     neutralPass ? "PASS" : "FAIL", neutral));
 
+            // CJK word counting: a character is a unit, Latin stays one word.
+            int zhShort = ConcordanceText.WordCountClean("我来了");
+            int zhLine = ConcordanceText.WordCountClean("你他妈疯了吗");
+            int jaShort = ConcordanceText.WordCountClean("やばい");
+            int mixed = ConcordanceText.WordCountClean("OK我来了");
+            int latin = ConcordanceText.WordCountClean("hello there");
+            int korean = ConcordanceText.WordCountClean("기다려 주십시오");
+            bool countPass = zhShort == 3 && zhLine == 6 && jaShort == 3 &&
+                             mixed == 4 && latin == 2 && korean == 2 &&
+                             ConcordanceText.WordLimit(24, "我来了") == 60 &&
+                             ConcordanceText.WordLimit(24, "hello there") == 24;
+            if (!countPass) failures++;
+            lines.Add(string.Format("{0}  cjk counts     zh={1} ja={2} mixed={3} latin={4} ko={5}",
+                                    countPass ? "PASS" : "FAIL", zhShort, jaShort, mixed, latin, korean));
+
             // The query's own word must not count as evidence for itself.
             HashSet<string> queryEcho = new HashSet<string>(StringComparer.Ordinal) { "whatever" };
             double echo = Register.Value("WHATEVER'S THE MATTER WITH YOUR AUNT?", null,
@@ -656,6 +689,8 @@ namespace Qalam
             cases.Add(new Case { Lang = "en", Colloquial = "Yeah, whatever, man.", Flat = "I would appreciate it if you would wait here." });
             cases.Add(new Case { Lang = "es", Colloquial = "¡Joder, tío, qué guay!", Flat = "Señor, ¿podría usted esperar aquí?" });
             cases.Add(new Case { Lang = "ar", Colloquial = "يعني خلاص، شو بدي أعمل؟", Flat = "حضرتك، الرجاء الانتظار هنا." });
+            cases.Add(new Case { Lang = "ar", Colloquial = "هسي الزول ده ماشي، بعد بخلص من الشغل.", Flat = "حضرتك، الرجاء الانتظار هنا." });
+            cases.Add(new Case { Lang = "ar", Colloquial = "شكو ماكو، هسة نجي، هواية خوش شغل.", Flat = "حضرتك، الرجاء الانتظار هنا." });
             cases.Add(new Case { Lang = "fr", Colloquial = "Putain, mec, c'est trop bien !", Flat = "Veuillez patienter ici, monsieur." });
             cases.Add(new Case { Lang = "de", Colloquial = "Scheiße, Alter, das ist echt krass!", Flat = "Bitte warten Sie hier, meine Dame." });
             cases.Add(new Case { Lang = "it", Colloquial = "Cazzo, raga, che figata!", Flat = "La prego di attendere qui, signore." });

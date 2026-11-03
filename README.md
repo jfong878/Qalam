@@ -207,13 +207,14 @@ including `calla chingada`, `no mames`, `no manches`, `güey`, `cabrón`, `pende
 `de puta madre`, and a second pass of Mexican and Peninsular everyday lines such as
 `no mames güey`, `vete a la verga`, `me lleva la chingada`, `está cabrón`, `a poco`,
 `de volada`, `en chinga`, `qué oso`, `vaya tela`, `qué morro`, and `a tope`. It also
-has an Arabic-dialect table covering Egyptian, Levantine, Gulf, Moroccan, and common
-MSA expressions such as `إيه ده`, `معلش`, `شو الأخبار`, `وين رايح`, `وش أخبارك`,
+has an Arabic-dialect table covering Egyptian, Levantine, Gulf, Sudanese, Iraqi, Yemeni, Hijazi,
+Moroccan, Tunisian, Algerian, Libyan, and common MSA expressions such as `إيه ده`, `معلش`, `شو الأخبار`, `وين رايح`, `وش أخبارك`,
 `لاباس`, `بزاف`, `خلاص`, and `يا سلام`, plus newer everyday lines including `إزيك`,
 `إيه يا عم`, `يا باشا`, `كده كده`, `على طول`, `مش فارقة`, `خد بالك`, `بجد`, `جامد`,
 `دلوقتي`, `شو رايك`, `على راسي`, `بلا مؤاخذة`, `ما تزعل`, `تكرم`, `شو صار`,
 `ما في مشكلة`, `وش رايك`, `أبشر`, `شنو الأخبار`, `كيداير`, `الله يخليك`, `بالصحة`,
-`لو سمحت`, and `بالتوفيق`, with an English → Arabic reverse path for common lines.
+`لو سمحت`, `بالتوفيق`, `ماشي`, `بعد بخلص من الشغل`, `قريب`, `هسي`,
+`زول`, and `كيفنك`, with an English → Arabic reverse path for common lines.
 When the selection is fully covered, the popup uses the curated rendering, labels it
 **Colloquial meaning**, and works without a network. For example:
 
@@ -228,10 +229,13 @@ model, `LocalModelEndpoint` to use another server, or `LocalModelEnabled` to `fa
 skip the local path. When Ollama is not running, the normal online services are used.
 
 The phrasebook is deliberately reviewable. The current table has 96 Spanish/English
-entries, 101 Arabic → English entries, and 28 English → Arabic entries. It covers
-common Mexican, Peninsular, Egyptian, Levantine, Gulf, and Moroccan expressions, not
-every dialect; the local model handles the rest. Entries are matched as whole
-phrases, and a partial match is never returned as a half-translated sentence.
+entries, 144 Arabic → English entries, and 28 English → Arabic entries. It covers
+common Mexican, Peninsular, Egyptian, Levantine, Gulf, Sudanese, Iraqi, Yemeni, Hijazi,
+Moroccan, Tunisian, Algerian, and Libyan expressions, not
+every dialect; the local model handles the rest. Each Arabic entry carries the lahja
+(dialect) that uses it, and several when a phrase is shared: `ماشي` is tagged
+Sudanese, Gulf, and Egyptian, and the label travels with the hint the local model
+receives. Entries are matched as whole phrases, and a partial match is never returned as a half-translated sentence.
 
 ## Grammar and conjugation
 
