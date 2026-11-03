@@ -278,8 +278,10 @@ def _translit_word(word, next_word, glide, at_start):
     if len(bare) > 3 and bare[0] in ("و", "ف") and bare.startswith("ال", 1):
         particle = "wa" if bare[0] == "و" else "fa"
         word = word[1:]
+        while word and word[0] in TRANSLIT_MARKS:
+            word = word[1:]
         bare = bare[1:]
-        glide = "a"
+        glide = None
 
     body_word = word
     article = bare.startswith("ال") and len(bare) > 2
@@ -293,27 +295,12 @@ def _translit_word(word, next_word, glide, at_start):
             kept.append(ch)
         body_word = "".join(kept)
         if bare[2] in SUN_LETTERS:
-            # The shaddah on a sun letter is the assimilation mark, not a
-            # doubled consonant of the word itself.
             body_word = body_word.replace("\u0651", "", 1)
 
-    # Case vowels stay: the -u of As-Salaamu is pronounced, so the aid keeps it.
     rendered = _word_letters(body_word)
-    if not rendered:
-        return particle + bare
 
-    if article:
-        first = bare[2]
-        tail = rendered[0].upper() + rendered[1:]
-        letter = SUN_LETTERS[first] if first in SUN_LETTERS else "l"
-        if glide in ("u", "i", "a"):
-            # Idaafah: the article takes the case vowel of the mudaaf head
-            # (Aṣ-Ṣalaat ul-Jamaa'ah, Manhaj Rajul id-Dawlah, Manhaj Ṭaalib il-'Ilm).
-            prefix = glide + letter + "-"
-        else:
-            prefix = ("A" if at_start else "a") + letter + "-"
-        return particle + prefix + tail
-
+    # Taa ul-Marbootah: -ah in pause, -at before a word, -atu before a particle.
+    taa = ""
     if bare.endswith("ة"):
         vowel = ""
         for candidate in ("an", "un", "in", "u", "i", "a"):
@@ -321,16 +308,32 @@ def _translit_word(word, next_word, glide, at_start):
                 vowel = rendered[-len(candidate):]
                 rendered = rendered[:-len(candidate)]
                 break
+        # The long alif already supplies the a of -ah / -at.
+        long_a = rendered.endswith("a")
         if next_word is None:
-            rendered += "ah"
+            taa = "h" if long_a else "ah"
         else:
             bare_next = "".join(ch for ch in next_word if ch not in TRANSLIT_MARKS)
-            # A following particle keeps the case vowel: was-Salaatu was-Salaam.
-            if bare_next[:1] in ("و", "ف"):
-                rendered += "at" + vowel
-            else:
-                rendered += "at"
-    return particle + rendered
+            base = "t" if long_a else "at"
+            taa = base + vowel if bare_next[:1] in ("و", "ف") else base
+
+    if article:
+        if not rendered:
+            return particle + bare + taa
+        first = bare[2]
+        tail = rendered[0].upper() + rendered[1:] + taa
+        letter = SUN_LETTERS[first] if first in SUN_LETTERS else "l"
+        if particle:
+            if next_word is None and tail[-1:] in ("u", "i", "a"):
+                # Pause form: the particle phrase drops its case vowel.
+                tail = tail[:-1]
+            return particle + letter + "-" + tail
+        if glide in ("u", "i", "a"):
+            # Idaafah glide: Aṣ-Ṣalaat ul-Jamaa'ah, Manhaj Rajul id-Dawlah.
+            return glide + letter + "-" + tail
+        return ("A" if at_start else "a") + letter + "-" + tail
+
+    return particle + rendered + taa
 
 
 def transliterate(text):
