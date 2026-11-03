@@ -34,43 +34,138 @@ def clean_output(text):
     return "".join(ch for ch in text if ord(ch) >= 32).strip()
 
 
-# Dialect pronunciation for the tashkeel command. Mishkal vocalizes MSA, so a
-# lahja word either comes back bare or with MSA vowels (بَخْلُص instead of
-# بَخَلِّص). These entries carry the spoken form; the brand-new spelling wins and
-# everything else loses its ʾiʿrāb below, which is the Fuṣḥā/dialect split.
+# Dialect pronunciation for the tashkeel command.
+#
+# Every register has its own entries, and each entry names the lahjaat that
+# actually use the word, so an Iraqi register never rewrites Moroccan words and a
+# Sudanese one never rewrites Gulf words. Membership is exact: a word shared by
+# three dialects carries all three codes.
+NO_DIACRITICS = re.compile("[\u064B-\u0652\u0670\u0640]")
+PUNCTUATION = "\u060C\u061B\u061F.,!?:;\"'()[]{}«»…"
+CASE_ENDING = re.compile("[\u064F\u0650\u064B\u064C\u064D]$")
+
+
+def _w(vocalized, *lahjaat):
+    return (vocalized, frozenset(lahjaat))
+
+
 LAHJA_WORDS = {
-    "هسي": "هَسِّي", "هسة": "هَسَّة", "دحين": "دَحِين", "هلق": "هَلَّق",
-    "هلأ": "هَلَّأ", "شنو": "شِنُو", "شكو": "شَكُو", "ماكو": "مَاكُو",
-    "خوش": "خُوش", "هواية": "هَوَايَة", "ماشي": "مَاشِي", "بخلص": "بَخَلِّص",
-    "أخلص": "أَخَلِّص", "قريب": "قَرِيب", "زول": "زَوْل", "كيفنك": "كَيْفِنْك",
-    "عايز": "عَايِز", "أوي": "أَوِي", "برشا": "بَرْشَا", "باهي": "بَاهِي",
-    "واش": "وَاش", "هلبا": "هَلْبَا", "نبي": "نِبِي", "بغيت": "بْغِيت",
-    "شحال": "شْحَال", "دابا": "دَابَا", "بزاف": "بْزَاف", "لاباس": "لَابَاس",
-    "واخا": "وَاخَا", "صافي": "صَافِي", "مزيان": "مْزِيَان", "خويا": "خُويَا",
-    "كيداير": "كِيدَايِر", "شكون": "شْكُون", "علاش": "عْلَاش", "وش": "وَشْ",
-    "إيش": "إِيش", "الحين": "الحِين", "أبغى": "أَبْغَى", "بدي": "بِدِّي",
-    "عنجد": "عَنْجَد", "شوي": "شْوَي", "كمان": "كَمَان", "بص": "بُصّ",
-    "ابغى": "أَبْغَى", "ايش": "إِيش", "هسا": "هَسَا",
+    # Egyptian
+    "دلوقتي": _w("دِلْوَقْتِي", "egyptian"),
+    "عايز": _w("عَايِز", "egyptian"),
+    "عاوز": _w("عَاوِز", "egyptian"),
+    "أوي": _w("أَوِي", "egyptian"),
+    "كمان": _w("كَمَان", "egyptian", "levantine"),
+    "بص": _w("بُصّ", "egyptian"),
+    "معلش": _w("مَعْلِش", "egyptian"),
+    "إيه": _w("إِيه", "egyptian"),
+    "ازيك": _w("إِزَيِّك", "egyptian"),
+    "إزيك": _w("إِزَيِّك", "egyptian"),
+    "خالص": _w("خَالِص", "egyptian"),
+    "بخلص": _w("بَخَلِّص", "egyptian", "sudanese", "gulf"),
+    "أخلص": _w("أَخَلِّص", "egyptian", "sudanese", "gulf"),
+    # Levantine
+    "هلق": _w("هَلَّق", "levantine"),
+    "هلأ": _w("هَلَّأ", "levantine"),
+    "بدي": _w("بِدِّي", "levantine"),
+    "بدك": _w("بِدِّك", "levantine"),
+    "منيح": _w("مْنِيح", "levantine"),
+    "كتير": _w("كْتِير", "levantine"),
+    "عنجد": _w("عَنْجَد", "levantine"),
+    "شوي": _w("شْوَي", "levantine", "gulf"),
+    "شو": _w("شُو", "levantine"),
+    "خلص": _w("خَلِّص", "levantine"),
+    "يلا": _w("يَلَّا", "levantine", "egyptian", "sudanese"),
+    # Gulf
+    "الحين": _w("الحِين", "gulf"),
+    "وش": _w("وَشْ", "gulf", "hijazi"),
+    "أبا": _w("أَبَا", "gulf"),
+    "ابا": _w("أَبَا", "gulf"),
+    "تبي": _w("تِبِي", "gulf"),
+    "زين": _w("زَيْن", "gulf"),
+    "وايد": _w("وَايِد", "gulf"),
+    "شلونك": _w("شْلُونَك", "gulf", "iraqi"),
+    "عساك": _w("عَسَاك", "gulf", "yemeni"),
+    "أبشر": _w("أَبْشِر", "gulf"),
+    "خلاص": _w("خَلَاص", "gulf", "sudanese", "levantine"),
+    "ماشي": _w("مَاشِي", "sudanese", "gulf", "egyptian"),
+    "قريب": _w("قَرِيب", "sudanese", "gulf"),
+    # Sudanese
+    "هسي": _w("هَسِّي", "sudanese"),
+    "زول": _w("زَوْل", "sudanese"),
+    "كيفنك": _w("كَيْفِنْك", "sudanese"),
+    # Iraqi
+    "هسة": _w("هَسَّة", "iraqi"),
+    "هسا": _w("هَسَا", "iraqi"),
+    "شكو": _w("شَكُو", "iraqi"),
+    "ماكو": _w("مَاكُو", "iraqi"),
+    "خوش": _w("خُوش", "iraqi"),
+    "هواية": _w("هَوَايَة", "iraqi"),
+    "شنو": _w("شِنُو", "iraqi", "sudanese", "moroccan"),
+    # Yemeni
+    "شي": _w("شِي", "yemeni"),
+    "حياك": _w("حَيَّاك", "yemeni", "gulf", "hijazi", "sudanese"),
+    # Hijazi
+    "دحين": _w("دَحِين", "hijazi"),
+    "إيش": _w("إِيش", "hijazi", "gulf"),
+    "ايش": _w("إِيش", "hijazi", "gulf"),
+    "أبغى": _w("أَبْغَى", "hijazi"),
+    "ابغى": _w("أَبْغَى", "hijazi"),
+    "كذا": _w("كِذَا", "hijazi", "gulf"),
+    "زحمة": _w("زَحْمَة", "hijazi", "gulf", "egyptian"),
+    # Moroccan
+    "دابا": _w("دَابَا", "moroccan"),
+    "بزاف": _w("بْزَاف", "moroccan", "algerian"),
+    "لاباس": _w("لَابَاس", "moroccan"),
+    "واخا": _w("وَاخَا", "moroccan"),
+    "صافي": _w("صَافِي", "moroccan"),
+    "مزيان": _w("مْزِيَان", "moroccan"),
+    "خويا": _w("خُويَا", "moroccan"),
+    "كيداير": _w("كِيدَايِر", "moroccan"),
+    "شكون": _w("شْكُون", "moroccan", "tunisian"),
+    "علاش": _w("عْلَاش", "moroccan", "tunisian"),
+    "شحال": _w("شْحَال", "moroccan"),
+    "فين": _w("فِين", "moroccan"),
+    "واش": _w("وَاش", "moroccan", "algerian"),
+    # Tunisian
+    "برشا": _w("بَرْشَا", "tunisian"),
+    "باهي": _w("بَاهِي", "tunisian", "libyan"),
+    # Libyan
+    "هلبا": _w("هَلْبَا", "libyan"),
+    "نبي": _w("نِبِي", "libyan"),
 }
 
-ARABIC_WORD = re.compile("[\u0621-\u064A\u0671-\u06D3]+")
-DIACRITICS = re.compile("[\u064B-\u0652\u0670\u0640]")
-# Final short vowel or tanween before a boundary: the ʾiʿrāb a dialect drops.
-CASE_ENDING = re.compile(r"[\u064F\u0650\u064B\u064C\u064D](?=[\s\u060C\u061B\u061F.,!?؟\n]|$)")
+
+def _split_punct(token):
+    start = 0
+    end = len(token)
+    while start < end and token[start] in PUNCTUATION:
+        start += 1
+    while end > start and token[end - 1] in PUNCTUATION:
+        end -= 1
+    return token[:start], token[start:end], token[end:]
 
 
 def apply_lahja(text, lahja):
-    """Rewrite a vocalized line toward the spoken form of a lahja."""
+    """Rewrite a vocalized line toward the spoken form of one lahja."""
     if not lahja or lahja == "fusha":
         return text
 
-    def replace(match):
-        word = match.group(0)
-        bare = DIACRITICS.sub("", word)
-        return LAHJA_WORDS.get(bare, word)
-
-    text = ARABIC_WORD.sub(replace, text)
-    return CASE_ENDING.sub("", text)
+    pieces = []
+    for token in text.split(" "):
+        if not token:
+            pieces.append(token)
+            continue
+        prefix, core, suffix = _split_punct(token)
+        bare = NO_DIACRITICS.sub("", core)
+        entry = LAHJA_WORDS.get(bare)
+        if entry is not None and lahja in entry[1]:
+            core = entry[0]
+        else:
+            # Every lahja drops the case ending; Fuṣḥā keeps it.
+            core = CASE_ENDING.sub("", core)
+        pieces.append(prefix + core + suffix)
+    return " ".join(pieces)
 
 
 def respond(payload):
