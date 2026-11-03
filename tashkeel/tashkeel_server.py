@@ -564,6 +564,16 @@ PREPOSITIONS = {
 UNMARKED_PARTICLES = {"ان": "إِنْ", "إن": "إِنْ", "أن": "أَنْ"}
 
 
+# Decoration the reader never says: kashida (tatweel) and zero-width marks
+# arrive whenever text is copied out of a justified page or a PDF.
+INVISIBLE = {"ـ", "​", "‌", "‍", "‎", "‏",
+             "﻿", "­"}
+
+
+def _clean_input(text):
+    return "".join(ch for ch in text if ch not in INVISIBLE)
+
+
 def _bare_words(text):
     return ["".join(ch for ch in w if ch not in TRANSLIT_MARKS) for w in text.split(" ")]
 
@@ -697,6 +707,7 @@ def main():
                 raise ValueError("text must be a string")
             if len(text) > MAX_CHARS:
                 text = text[:MAX_CHARS]
+            text = _clean_input(text)
 
             lahja = req.get("lahja") or "fusha"
             if not isinstance(lahja, str):

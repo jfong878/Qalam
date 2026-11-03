@@ -52,6 +52,10 @@ The Transliteration line now follows the pronunciation register you chose, so a 
 
 Unvocalized input is read by context: a bare ان with no shadda is the conditional In, not anna, so ان شاء الله بعد بخلص من الشغل اليوم becomes In Shaa' Allaah ba'd bakhalliṣ min ash-Shughl il-Yawm. Formulae such as In Shaa' Allaah, Bismillaah, Al-Ḥamdu lillaah, As-Salaamu 'alaykum, Maa Shaa' Allaah, Subḥaan Allaah, Allaahu Akbar and Laa ilaaha illaa Allaah keep their Fuṣḥā shape in every register; a preposition keeps the plain article after it (min ash-shughul) while the genitive i still carries onto a following article (ash-Shughl il-Yawm).
 
+## 1.0.16 — 2026-11-03
+
+Kashida and zero-width marks are dropped before reading, so text copied out of a justified page no longer turns بـتـبـدأ into Batabadaa or الـيـوم into al-Ayawam.
+
 ## 1.0.15 — 2026-11-03
 
 The installer rejected the Windows Store Python aliases because they are zero-byte stubs, so every install aborted with "Python 3 is required" before copying a single file. Candidates are now run instead of measured, with a `py -3` fallback.
