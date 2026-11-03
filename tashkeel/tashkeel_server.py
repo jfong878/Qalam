@@ -175,6 +175,7 @@ LAHJA_OVERRIDES = {
         "دابا": "دَابَا", "بزاف": "بْزَاف",
     },
     "sudanese": {
+        "وبتخلص": "وَبِتْخَلِّص",
         "بخلص": "بَخْلِص",
     },
 }
@@ -354,7 +355,10 @@ def _word_letters(word):
                 out.append("a")
             continue
         if ch == "ى":
-            out.append("aa")
+            if out and out[-1] == "a":
+                out[-1] = "aa"
+            else:
+                out.append("aa")
             continue
         if ch == "و":
             if out and out[-1] == "u":
@@ -381,6 +385,9 @@ def _word_letters(word):
             out.append("'")
             continue
         if ch in ("أ", "إ", "آ"):
+            if index == len(chars) - 1:
+                out.append("'")
+                continue
             if index == 0:
                 # Word-initial hamza is not written; its vowel follows.
                 if ch == "آ":
@@ -596,7 +603,7 @@ def transliterate(text):
         elif rendered[-1:] in ("u", "i", "a"):
             glide = rendered[-1]
         else:
-            glide = "i"
+            glide = "a"
         genitive = governs
         index += 1
     result = " ".join(out).replace("  ", " ").strip()
