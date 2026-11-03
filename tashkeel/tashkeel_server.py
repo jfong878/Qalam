@@ -151,7 +151,7 @@ def _split_punct(token):
 FIXUPS = {
     "إن": "إِنْ",
     "أن": "أَنْ",
-    "بعد": "بَعِدْ",
+    "بعد": "بَعْد",
     "السلام": "السَلَام",
     "عليكم": "عَلَيْكُم",
     "الصلاة": "الصَلَاة",
@@ -175,20 +175,25 @@ FIXUPS = {
 SHORT_TAIL = {"َ", "ُ", "ِ", "ً", "ٌ", "ٍ"}
 
 
-def apply_fixups(text):
+def apply_fixups(text, original=None):
     """Repair the words Mishkal reliably mis-vocalizes.
 
     It returns السُّلَّام and الصَلَاَة for the two most
     common words in the app, which then read sullaam and salaaah.
     """
     pieces = []
-    for token in text.split(" "):
+    source = original.split(" ") if original else []
+    for order, token in enumerate(text.split(" ")):
         if not token:
             pieces.append(token)
             continue
         prefix, core, suffix = _split_punct(token)
         bare = NO_DIACRITICS.sub("", core)
         fixed = FIXUPS.get(bare)
+        if fixed is None and order < len(source):
+            written = NO_DIACRITICS.sub("", source[order])
+            if written in UNMARKED_PARTICLES and "ّ" not in source[order]:
+                fixed = UNMARKED_PARTICLES[written]
         core_prefix = ""
         if fixed is None:
             # A conjunction or preposition glued to a repaired word:
@@ -468,34 +473,71 @@ def _vowel_repair(text):
     return " ".join(pieces)
 
 
+FORMULAS = [
+    (("ان", "شاء", "الله"), "In Shaa' Allaah"),
+    (("إن", "شاء", "الله"), "In Shaa' Allaah"),
+    (("السلام", "عليكم"), "As-Salaamu 'alaykum"),
+    (("لا", "إله", "إلا", "الله"), "Laa ilaaha illaa Allaah"),
+    (("ما", "شاء", "الله"), "Maa Shaa' Allaah"),
+    (("بسم", "الله"), "Bismillaah"),
+    (("الحمد", "لله"), "Al-Ḥamdu lillaah"),
+    (("سبحان", "الله"), "Subḥaan Allaah"),
+    (("الله", "أكبر"), "Allaahu Akbar"),
+    (("الله",), "Allaah"),
+]
+
+PREPOSITIONS = {
+    "من", "إلى", "الى", "في", "على",
+    "عن", "ب", "ل", "ك", "حتى", "منذ",
+    "خلال", "بعد", "قبل", "مع",
+}
+
+# A bare conditional or complementiser carries no shadda. Mishkal invents one
+# and reads both as "anna", so the unmarked spelling decides the reading.
+UNMARKED_PARTICLES = {"ان": "إِنْ", "إن": "إِنْ", "أن": "أَنْ"}
+
+
+def _bare_words(text):
+    return ["".join(ch for ch in w if ch not in TRANSLIT_MARKS) for w in text.split(" ")]
+
+
 def transliterate(text):
-    words = text.split(" ")
+    words = [w for w in text.split(" ") if w.strip()]
+    bares = _bare_words(" ".join(words))
     out = []
     glide = None
-    for index, word in enumerate(words):
-        if not word.strip():
-            out.append(word)
-            continue
-        nxt = None
-        for later in words[index + 1:]:
-            if later.strip():
-                nxt = later
+    index = 0
+    while index < len(words):
+        matched = False
+        for sequence, fixed in FORMULAS:
+            span = len(sequence)
+            if index + span <= len(words) and tuple(bares[index:index + span]) == sequence:
+                out.append(fixed)
+                index += span
+                glide = "i"
+                matched = True
                 break
-        rendered = _translit_word(word, nxt, glide, glide is None)
+        if matched:
+            continue
+        word = words[index]
+        nxt = words[index + 1] if index + 1 < len(words) else None
+        governs = bares[index] in PREPOSITIONS
+        rendered = _translit_word(word, nxt, "a" if governs else glide, glide is None)
         out.append(rendered)
-        if rendered.endswith("at"):
+        # A preposition keeps its plain a on the noun it governs; otherwise the
+        # last vowel of this word carries onto the next one.
+        if governs:
+            glide = "a"
+        elif rendered.endswith("at"):
             glide = "u"
         elif rendered[-1:] in ("u", "i", "a"):
             glide = rendered[-1]
         else:
-            # A construct chain with no visible ending reads as majroor.
             glide = "i"
+        index += 1
     result = " ".join(out).replace("  ", " ").strip()
     if result:
         result = result[0].upper() + result[1:]
-    # The formula is written with both words capitalised: In Shaa' Allaah.
-    if result.startswith("In shaa' Allaah"):
-        result = "In Shaa' Allaah" + result[len("In shaa' Allaah"):]
     return result
 
 
@@ -575,7 +617,7 @@ def main():
             if cmd == "translit":
                 if vocalizer is None:
                     raise RuntimeError("mishkal import failed: %s" % mishkal_error)
-                spoken = apply_lahja(apply_fixups(vocalizer.tashkeel(text)), lahja)
+                spoken = apply_lahja(apply_fixups(vocalizer.tashkeel(text), text), lahja)
                 respond({"id": req.get("id"), "ok": True, "text": transliterate(spoken)})
                 continue
 
@@ -589,7 +631,7 @@ def main():
 
             if vocalizer is None:
                 raise RuntimeError("mishkal import failed: %s" % mishkal_error)
-            vocalized = apply_lahja(apply_fixups(vocalizer.tashkeel(text)), lahja)
+            vocalized = apply_lahja(apply_fixups(vocalizer.tashkeel(text), text), lahja)
             respond({"id": req.get("id"), "ok": True, "text": clean_output(vocalized)})
         except Exception:
             respond(
