@@ -138,6 +138,14 @@ LAHJA_WORDS = {
 }
 
 
+# Register-specific readings that differ from the Fusḥaa form the fixups give.
+# Sudanese says bakhliṣ (form I); Egyptian and Gulf say bakhalliṣ (form II).
+LAHJA_OVERRIDES = {
+    "sudanese": {
+        "بخلص": "بَخْلِص",
+    },
+}
+
 def _split_punct(token):
     start = 0
     end = len(token)
@@ -234,8 +242,11 @@ def apply_lahja(text, lahja):
             continue
         prefix, core, suffix = _split_punct(token)
         bare = NO_DIACRITICS.sub("", core)
+        override = (LAHJA_OVERRIDES.get(lahja) or {}).get(bare)
         entry = LAHJA_WORDS.get(bare)
-        if entry is not None and lahja in entry[1]:
+        if override is not None:
+            core = override
+        elif entry is not None and lahja in entry[1]:
             core = entry[0]
         else:
             # Every lahja drops the case ending; Fuṣḥā keeps it.
