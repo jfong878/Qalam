@@ -283,6 +283,9 @@ namespace Qalam
         // offline = local Ollama only. Kept as a string so older config files
         // deserialize without a custom converter.
         public string TranslationMode { get; set; }
+        // fusha keeps Mishkal's case endings; any lahja code makes the worker use
+        // the dialect form and drop ʾiʿrāb for tashkeel and for speech.
+        public string SpokenLahja { get; set; }
         public string Theme { get; set; }
         public string[] ExcludedProcesses { get; set; }
 
@@ -304,6 +307,8 @@ namespace Qalam
             LocalModelEndpoint = "http://127.0.0.1:11434";
             LocalModelName = "";
             TranslationMode = "auto";
+            SpokenLahja = Pronunciation.Fusha;
+            Pronunciation.Current = SpokenLahja;
             Theme = ThemeManager.SystemTheme;
             ExcludedProcesses = new string[] { "keepass", "keepassxc", "1password", "bitwarden", "lastpass", "dashlane", "enpass" };
         }
@@ -338,12 +343,15 @@ namespace Qalam
                         if (string.IsNullOrEmpty(cfg.LocalModelEndpoint))
                             cfg.LocalModelEndpoint = "http://127.0.0.1:11434";
                         if (cfg.LocalModelName == null) cfg.LocalModelName = "";
+                        bool addSpokenLahja = json.IndexOf("\"SpokenLahja\"", StringComparison.OrdinalIgnoreCase) < 0;
                         bool addTranslationMode = json.IndexOf("\"TranslationMode\"", StringComparison.OrdinalIgnoreCase) < 0;
                         bool addTheme = json.IndexOf("\"Theme\"", StringComparison.OrdinalIgnoreCase) < 0;
                         cfg.TranslationMode = TranslationService.NormalizeMode(cfg.TranslationMode);
+                        cfg.SpokenLahja = Pronunciation.Normalize(cfg.SpokenLahja);
+                        Pronunciation.Current = cfg.SpokenLahja;
                         cfg.Theme = ThemeManager.Normalize(cfg.Theme);
                         Paths.SyncFolder = cfg.SyncFolder;
-                        if (addTranslationMode || addTheme || addUpdateUrl || addAutoUpdate) cfg.Save();
+                        if (addSpokenLahja || addTranslationMode || addTheme || addUpdateUrl || addAutoUpdate) cfg.Save();
                         return cfg;
                     }
                 }
@@ -1605,9 +1613,14 @@ namespace Qalam
         private static MediaPlayer _player;
         private static string _lastFile;
 
+        // Set once at startup so speech can ask the offline worker for the
+        // dialect reading without the popup holding a config or a client.
+        public static Func<string, string, string> Vocalizer;
+
         public static async Task SpeakAsync(string text, string language)
         {
             if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(language)) return;
+            text = PrepareSpoken(text, language);
             if (text.Length > 220) text = text.Substring(0, 220);
 
             string url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=" +
@@ -1638,6 +1651,20 @@ namespace Qalam
                 try { File.Delete(previous); }
                 catch { }
             }
+        }
+
+        // Fuṣḥā speaks the text as written. A lahja register first asks the
+        // offline worker for the dialect vocalization, which is what makes the
+        // reader drop case endings and use the spoken vowels.
+        private static string PrepareSpoken(string text, string language)
+        {
+            if (Vocalizer == null) return text;
+            if (!Pronunciation.IsArabic(language)) return text;
+            if (!Pronunciation.NeedsDialectVocalization(Pronunciation.Current)) return text;
+            foreach (char c in text)
+                if (ArabicText.IsMark(c)) return text;
+            try { return Vocalizer(text, Pronunciation.Current); }
+            catch (Exception ex) { Logger.Write("tts lahja: " + ex.Message); return text; }
         }
 
         private static HttpClient CreateClient()
@@ -1681,15 +1708,22 @@ namespace Qalam
 
         public string Diacritize(string text)
         {
-            return TextCommand("tashkeel", text, "Tashkeel");
+            return TextCommand("tashkeel", text, "Tashkeel", null);
+        }
+
+        // A lahja register asks the worker for the spoken form: dialect vowels
+        // and no case endings, instead of a Fuṣḥā reading.
+        public string Diacritize(string text, string lahja)
+        {
+            return TextCommand("tashkeel", text, "Tashkeel", Pronunciation.Normalize(lahja));
         }
 
         public string Pinyin(string text)
         {
-            return TextCommand("pinyin", text, "Pinyin");
+            return TextCommand("pinyin", text, "Pinyin", null);
         }
 
-        private string TextCommand(string command, string text, string name)
+        private string TextCommand(string command, string text, string name, string lahja)
         {
             lock (_gate)
             {
@@ -1697,6 +1731,7 @@ namespace Qalam
                 request["id"] = ++_nextId;
                 request["cmd"] = command;
                 request["text"] = text;
+                if (!string.IsNullOrEmpty(lahja)) request["lahja"] = lahja;
                 Send(request);
 
                 Dictionary<string, object> response = Receive(20000);
@@ -2544,7 +2579,10 @@ namespace Qalam
 
         public void ShowTashkeel(string text, string role)
         {
-            ShowTranscription("TASHKEEL", text, role, true, text, "ar");
+            // The register also picks the speech tag, so Listen reads the same
+            // lahja the tashkeel was produced in.
+            ShowTranscription("TASHKEEL", text, role, true, text,
+                Pronunciation.TtsLanguage(Pronunciation.Current));
         }
 
         public void ShowPinyin(string pinyin, string source, string role)
@@ -2903,6 +2941,7 @@ namespace Qalam
             _context = new ContextService();
             _grammar = new GrammarService();
             _tashkeel = new TashkeelClient(_config);
+            SpeechService.Vocalizer = _tashkeel.Diacritize;
             _popup = new PopupWindow();
             _popup.TargetChanged += OnPopupTargetChanged;
             _popup.CharactersRequested += delegate(string text)
@@ -3257,7 +3296,7 @@ namespace Qalam
             {
                 try
                 {
-                    string vocalized = await Task.Run(() => _tashkeel.Diacritize(transcription));
+                    string vocalized = await Task.Run(() => _tashkeel.Diacritize(transcription, _config.SpokenLahja));
                     Logger.Write("tashkeel ok: " + role + " chars=" + vocalized.Length);
                     _popup.ShowTashkeel(vocalized, role);
                 }
@@ -3550,6 +3589,28 @@ namespace Qalam
             WinForms.ToolStripMenuItem show = new WinForms.ToolStripMenuItem("Show last result");
             show.Click += delegate { if (_last != null) _popup.ShowAgain(_last); };
             menu.Items.Add(show);
+
+            WinForms.ToolStripMenuItem pronunciation = new WinForms.ToolStripMenuItem("Pronunciation");
+            foreach (string code in Pronunciation.Codes)
+            {
+                string lahja = code;
+                WinForms.ToolStripMenuItem entry = new WinForms.ToolStripMenuItem(Pronunciation.Name(lahja));
+                entry.Checked = Pronunciation.Normalize(_config.SpokenLahja) == lahja;
+                entry.Click += delegate
+                {
+                    _config.SpokenLahja = lahja;
+                    Pronunciation.Current = lahja;
+                    _config.Save();
+                    foreach (WinForms.ToolStripItem item in pronunciation.DropDownItems)
+                    {
+                        WinForms.ToolStripMenuItem row = item as WinForms.ToolStripMenuItem;
+                        if (row != null) row.Checked = Pronunciation.Normalize(_config.SpokenLahja) == lahja;
+                    }
+                    Logger.Write("pronunciation register: " + lahja);
+                };
+                pronunciation.DropDownItems.Add(entry);
+            }
+            menu.Items.Add(pronunciation);
 
             WinForms.ToolStripMenuItem characters = new WinForms.ToolStripMenuItem("Chinese Characters\u2026");
             characters.Click += delegate

@@ -49,6 +49,7 @@ $cscArgs = @(
     (Join-Path $root 'src\Theme.cs')
     (Join-Path $root 'src\LanguageCatalog.cs')
     (Join-Path $root 'src\Colloquial.cs')
+    (Join-Path $root 'src\Pronunciation.cs')
     (Join-Path $root 'src\LocalModel.cs')
     (Join-Path $root 'src\Grammar.cs')
     (Join-Path $root 'src\Concordance.cs')

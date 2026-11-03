@@ -486,6 +486,25 @@ reading aid and review anything that will be published or taught.
 
 Already-vocalized text is passed through without doubling the marks.
 
+## Pronunciation and Lahjaat
+
+Tashkeel and the **Listen** button follow a pronunciation register, chosen from tray ->
+**Pronunciation** or with `SpokenLahja` in `config.json`. The default is **Fuṣḥā**;
+the others are Egyptian, Levantine, Gulf, Sudanese, Iraqi, Yemeni, Hijazi, Moroccan,
+Tunisian, Algerian, and Libyan.
+
+Fuṣḥā keeps Mishkal's case endings and tanwīn. A lahja register runs a second pass in
+the offline worker: the dialect forms it knows are vocalized the way they are spoken
+(`هسي` -> `هَسِّي`, `بخلص` -> `بَخَلِّص`, `ماشي` -> `مَاشِي`) and the ʾiʿrāb is
+dropped, because nobody says `بَخَلُّصُ` in the street. The Listen button sends that
+same vocalized line to the speech service, so the audio follows the register instead of
+reading the text as MSA.
+
+The speech service exposes one Arabic voice: every regional tag returns the same audio,
+so the difference you hear comes from the vowels and endings in the vocalized text, not
+from a different speaker. Words outside the dialect lexicon still get the MSA reading.
+
+
 ## Pinyin
 
 Chinese source text, or any source translated into Chinese, gets a **PINYIN** card in
