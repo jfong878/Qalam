@@ -362,7 +362,11 @@ def _word_letters(word):
             out.append("i")
             continue
         out.append(TRANS_LETTERS.get(ch, ""))
-    return "".join(out)
+    word_out = "".join(out)
+    # A yaa that is the seat of a kasra gives one long ee, never i-ee.
+    while "iee" in word_out:
+        word_out = word_out.replace("iee", "ee")
+    return word_out
 
 
 def _pause(text):
