@@ -52,6 +52,10 @@ The Transliteration line now follows the pronunciation register you chose, so a 
 
 Unvocalized input is read by context: a bare ان with no shadda is the conditional In, not anna, so ان شاء الله بعد بخلص من الشغل اليوم becomes In Shaa' Allaah ba'd bakhalliṣ min ash-Shughl il-Yawm. Formulae such as In Shaa' Allaah, Bismillaah, Al-Ḥamdu lillaah, As-Salaamu 'alaykum, Maa Shaa' Allaah, Subḥaan Allaah, Allaahu Akbar and Laa ilaaha illaa Allaah keep their Fuṣḥā shape in every register; a preposition keeps the plain article after it (min ash-shughul) while the genitive i still carries onto a following article (ash-Shughl il-Yawm).
 
+## 1.0.17 — 2026-11-03
+
+Fuṣḥā repairs only the words Mishkal could not read and leaves every word carrying a short vowel exactly as it stands, so btabda' no longer collapses to Btbd' and وبتخلص reads wabatakhalliṣ.
+
 ## 1.0.16 — 2026-11-03
 
 Kashida and zero-width marks are dropped before reading, so text copied out of a justified page no longer turns بـتـبـدأ into Batabadaa or الـيـوم into al-Ayawam.

@@ -268,7 +268,7 @@ def apply_fixups(text, original=None):
 def apply_lahja(text, lahja):
     """Rewrite a vocalized line toward the spoken form of one lahja."""
     if not lahja or lahja == "fusha":
-        return text
+        return _repair_fusha(text)
 
     pieces = []
     for token in text.split(" "):
@@ -533,6 +533,42 @@ def _vowel_repair(text):
                 continue
             run += 1
             out.append(ch)
+            if run >= 2:
+                out.append("َ")
+                run = 0
+        pieces.append("".join(out))
+    return " ".join(pieces)
+
+
+def _repair_fusha(text):
+    """Make a bare Fuṣḥā word pronounceable without touching a vocalized one.
+
+    A word carrying a short vowel is Mishkal's own reading and is left exactly
+    as it stands. A word carrying none, or only sukun, is one Mishkal could not
+    read: the sukun becomes a short a and every second consonant takes one, so
+    وبتخلص reads wabatakhalliṣ instead of wbtkhllṣ.
+    """
+    pieces = []
+    for token in text.split(" "):
+        if not token or any(ch in SHORT_VOWELS for ch in token):
+            pieces.append(token)
+            continue
+        out = []
+        run = 0
+        for ch in token:
+            if ch == "ْ":
+                out.append("َ")
+                run = 0
+                continue
+            if ch in VOWEL_MARKS:
+                out.append(ch)
+                continue
+            if not ("ء" <= ch <= "ي"):
+                out.append(ch)
+                run = 0
+                continue
+            out.append(ch)
+            run += 1
             if run >= 2:
                 out.append("َ")
                 run = 0
