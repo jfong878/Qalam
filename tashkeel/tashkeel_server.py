@@ -269,6 +269,12 @@ def _word_letters(word):
     return "".join(out)
 
 
+def _pause(text):
+    if not text.endswith(("aa", "ee", "oo")) and text[-1:] in ("u", "i", "a"):
+        return text[:-1]
+    return text
+
+
 def _cap(text):
     for index, ch in enumerate(text):
         if ch.isalpha():
@@ -335,15 +341,16 @@ def _translit_word(word, next_word, glide, at_start):
                 # Pause form: the particle phrase drops its case vowel.
                 tail = tail[:-1]
             return particle + letter + "-" + tail
+        if next_word is None:
+            tail = _pause(tail)
         if glide in ("u", "i", "a"):
             # Idaafah glide: Aṣ-Ṣalaat ul-Jamaa'ah, Manhaj Rajul id-Dawlah.
             return glide + letter + "-" + tail
         return ("A" if at_start else "a") + letter + "-" + tail
 
-    if next_word is None and not rendered.endswith(("aa", "ee", "oo")):
+    if next_word is None:
         # Pause form: a final short case vowel is not pronounced.
-        if rendered[-1:] in ("u", "i", "a"):
-            rendered = rendered[:-1]
+        rendered = _pause(rendered)
     return particle + rendered + taa
 
 
