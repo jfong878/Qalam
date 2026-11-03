@@ -385,6 +385,9 @@ def _translit_word(word, next_word, glide, at_start):
             body_word = body_word.replace("\u0651", "", 1)
 
     rendered = _word_letters(body_word)
+    # A doubled initial i comes from the hamza plus its kasra: In, not iin.
+    if rendered.startswith("ii") and len(rendered) > 2 and rendered[2] not in "aeiou":
+        rendered = rendered[1:]
     # A word-final hamza closes the syllable: shaa', not shaa'a.
     if rendered.endswith("'a"):
         rendered = rendered[:-1]
@@ -487,7 +490,13 @@ def transliterate(text):
         else:
             # A construct chain with no visible ending reads as majroor.
             glide = "i"
-    return " ".join(out).replace("  ", " ").strip()
+    result = " ".join(out).replace("  ", " ").strip()
+    if result:
+        result = result[0].upper() + result[1:]
+    # The formula is written with both words capitalised: In Shaa' Allaah.
+    if result.startswith("In shaa' Allaah"):
+        result = "In Shaa' Allaah" + result[len("In shaa' Allaah"):]
+    return result
 
 
 def respond(payload):
