@@ -493,7 +493,7 @@ Tashkeel and the **Listen** button follow a pronunciation register, chosen from 
 the others are Egyptian, Levantine, Gulf, Sudanese, Iraqi, Yemeni, Hijazi, Moroccan,
 Tunisian, Algerian, and Libyan.
 
-Fuṣḥā keeps Mishkal's case endings and tanwīn. A lahjah register runs a second pass in
+Fuṣḥā keeps Mishkal's case endings and Tanwīn. A lahjah register runs a second pass in
 the offline worker: the dialect forms it knows are vocalized the way they are spoken
 (`هسي` -> `هَسِّي`, `بخلص` -> `بَخَلِّص`, `ماشي` -> `مَاشِي`) and the ʾIʿrāb is
 dropped, because nobody says `بَخَلُّصُ` in the street. The Listen button sends that

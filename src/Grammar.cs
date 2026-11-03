@@ -498,7 +498,7 @@ namespace Qalam
             StringBuilder value = new StringBuilder(word.Length);
             foreach (char c in word)
             {
-                // Harakat, tanwin, shadda, sukun, superscript alef and the
+                // Harakat, Tanwīn, shadda, sukun, superscript alef and the
                 // Quranic annotation range are not part of a Kaikki page key.
                 if (IsArabicMark(c)) continue;
                 value.Append(c);
