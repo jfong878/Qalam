@@ -232,7 +232,7 @@ The phrasebook is deliberately reviewable. The current table has 96 Spanish/Engl
 entries, 144 Arabic → English entries, and 28 English → Arabic entries. It covers
 common Mexican, Peninsular, Egyptian, Levantine, Gulf, Sudanese, Iraqi, Yemeni, Hijazi,
 Moroccan, Tunisian, Algerian, and Libyan expressions, not
-every dialect; the local model handles the rest. Each Arabic entry carries the lahja
+every dialect; the local model handles the rest. Each Arabic entry carries the lahjah
 (dialect) that uses it, and several when a phrase is shared: `ماشي` is tagged
 Sudanese, Gulf, and Egyptian, and the label travels with the hint the local model
 receives. Entries are matched as whole phrases, and a partial match is never returned as a half-translated sentence.
@@ -486,16 +486,16 @@ reading aid and review anything that will be published or taught.
 
 Already-vocalized text is passed through without doubling the marks.
 
-## Pronunciation and Lahjaat
+## Pronunciation and Lahjāt
 
 Tashkeel and the **Listen** button follow a pronunciation register, chosen from tray ->
 **Pronunciation** or with `SpokenLahja` in `config.json`. The default is **Fuṣḥā**;
 the others are Egyptian, Levantine, Gulf, Sudanese, Iraqi, Yemeni, Hijazi, Moroccan,
 Tunisian, Algerian, and Libyan.
 
-Fuṣḥā keeps Mishkal's case endings and tanwīn. A lahja register runs a second pass in
+Fuṣḥā keeps Mishkal's case endings and tanwīn. A lahjah register runs a second pass in
 the offline worker: the dialect forms it knows are vocalized the way they are spoken
-(`هسي` -> `هَسِّي`, `بخلص` -> `بَخَلِّص`, `ماشي` -> `مَاشِي`) and the ʾiʿrāb is
+(`هسي` -> `هَسِّي`, `بخلص` -> `بَخَلِّص`, `ماشي` -> `مَاشِي`) and the ʾIʿrāb is
 dropped, because nobody says `بَخَلُّصُ` in the street. The Listen button sends that
 same vocalized line to the speech service, so the audio follows the register instead of
 reading the text as MSA.

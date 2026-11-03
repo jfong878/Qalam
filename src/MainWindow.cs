@@ -909,7 +909,7 @@ namespace Qalam
                 kind = "TASHKEEL";
                 role = "SOURCE";
                 speech = source;
-                speechLang = Pronunciation.TtsLanguage(_config.SpokenLahja);
+                speechLang = Pronunciation.TtsLanguage(_config.SpokenLahjah);
             }
             else if (!string.IsNullOrEmpty(result.Translation) && ArabicText.ContainsArabic(result.Translation))
             {
@@ -947,7 +947,7 @@ namespace Qalam
             {
                 string shown = kind == "PINYIN"
                     ? await Task.Run(() => _tashkeel.Pinyin(transcription))
-                    : await Task.Run(() => _tashkeel.Diacritize(transcription, _config.SpokenLahja));
+                    : await Task.Run(() => _tashkeel.Diacritize(transcription, _config.SpokenLahjah));
                 if (request != _requestId) return;
                 if (string.IsNullOrEmpty(shown))
                 {

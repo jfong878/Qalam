@@ -285,7 +285,7 @@ namespace Qalam
         public string TranslationMode { get; set; }
         // fusha keeps Mishkal's case endings; any lahja code makes the worker use
         // the dialect form and drop ʾiʿrāb for tashkeel and for speech.
-        public string SpokenLahja { get; set; }
+        public string SpokenLahjah { get; set; }
         public string Theme { get; set; }
         public string[] ExcludedProcesses { get; set; }
 
@@ -307,8 +307,8 @@ namespace Qalam
             LocalModelEndpoint = "http://127.0.0.1:11434";
             LocalModelName = "";
             TranslationMode = "auto";
-            SpokenLahja = Pronunciation.Fusha;
-            Pronunciation.Current = SpokenLahja;
+            SpokenLahjah = Pronunciation.Fusha;
+            Pronunciation.Current = SpokenLahjah;
             Theme = ThemeManager.SystemTheme;
             ExcludedProcesses = new string[] { "keepass", "keepassxc", "1password", "bitwarden", "lastpass", "dashlane", "enpass" };
         }
@@ -320,6 +320,8 @@ namespace Qalam
                 if (File.Exists(Paths.ConfigFile))
                 {
                     string json = File.ReadAllText(Paths.ConfigFile, Encoding.UTF8);
+                    // Older files spell the key without the final h.
+                    json = json.Replace("\"SpokenLahja\"", "\"SpokenLahjah\"");
                     Config cfg = new JavaScriptSerializer().Deserialize<Config>(json);
                     if (cfg != null)
                     {
@@ -351,15 +353,15 @@ namespace Qalam
                         if (string.IsNullOrEmpty(cfg.LocalModelEndpoint))
                             cfg.LocalModelEndpoint = "http://127.0.0.1:11434";
                         if (cfg.LocalModelName == null) cfg.LocalModelName = "";
-                        bool addSpokenLahja = json.IndexOf("\"SpokenLahja\"", StringComparison.OrdinalIgnoreCase) < 0;
+                        bool addSpokenLahjah = json.IndexOf("\"SpokenLahjah\"", StringComparison.OrdinalIgnoreCase) < 0;
                         bool addTranslationMode = json.IndexOf("\"TranslationMode\"", StringComparison.OrdinalIgnoreCase) < 0;
                         bool addTheme = json.IndexOf("\"Theme\"", StringComparison.OrdinalIgnoreCase) < 0;
                         cfg.TranslationMode = TranslationService.NormalizeMode(cfg.TranslationMode);
-                        cfg.SpokenLahja = Pronunciation.Normalize(cfg.SpokenLahja);
-                        Pronunciation.Current = cfg.SpokenLahja;
+                        cfg.SpokenLahjah = Pronunciation.Normalize(cfg.SpokenLahjah);
+                        Pronunciation.Current = cfg.SpokenLahjah;
                         cfg.Theme = ThemeManager.Normalize(cfg.Theme);
                         Paths.SyncFolder = cfg.SyncFolder;
-                        if (addSpokenLahja || addTranslationMode || addTheme || addUpdateUrl || addAutoUpdate) cfg.Save();
+                        if (addSpokenLahjah || addTranslationMode || addTheme || addUpdateUrl || addAutoUpdate) cfg.Save();
                         return cfg;
                     }
                 }
@@ -3330,7 +3332,7 @@ namespace Qalam
             {
                 try
                 {
-                    string vocalized = await Task.Run(() => _tashkeel.Diacritize(transcription, _config.SpokenLahja));
+                    string vocalized = await Task.Run(() => _tashkeel.Diacritize(transcription, _config.SpokenLahjah));
                     Logger.Write("tashkeel ok: " + role + " chars=" + vocalized.Length);
                     string romanized = null;
                     try { romanized = await Task.Run(() => _tashkeel.Transliterate(transcription)); }
@@ -3632,16 +3634,16 @@ namespace Qalam
             {
                 string lahja = code;
                 WinForms.ToolStripMenuItem entry = new WinForms.ToolStripMenuItem(Pronunciation.Name(lahja));
-                entry.Checked = Pronunciation.Normalize(_config.SpokenLahja) == lahja;
+                entry.Checked = Pronunciation.Normalize(_config.SpokenLahjah) == lahja;
                 entry.Click += delegate
                 {
-                    _config.SpokenLahja = lahja;
+                    _config.SpokenLahjah = lahja;
                     Pronunciation.Current = lahja;
                     _config.Save();
                     foreach (WinForms.ToolStripItem item in pronunciation.DropDownItems)
                     {
                         WinForms.ToolStripMenuItem row = item as WinForms.ToolStripMenuItem;
-                        if (row != null) row.Checked = Pronunciation.Normalize(_config.SpokenLahja) == lahja;
+                        if (row != null) row.Checked = Pronunciation.Normalize(_config.SpokenLahjah) == lahja;
                     }
                     Logger.Write("pronunciation register: " + lahja);
                 };

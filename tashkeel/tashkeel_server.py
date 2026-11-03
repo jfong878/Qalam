@@ -22,6 +22,8 @@ import re
 import sys
 import traceback
 
+TRANSLIT_MARKS = set("ًٌٍَُِّْٰـ")
+
 MAX_CHARS = 5000
 HAN = re.compile("[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]+")
 NO_SPACE_BEFORE = re.compile("\\s+([，。！？；：、,.!?;:)\\]】》」』”’])")
@@ -182,14 +184,12 @@ SUN_LETTERS = {
     "ت": "t", "ث": "th", "د": "d", "ذ": "dh", "ر": "r", "ز": "z", "س": "s",
     "ش": "sh", "ص": "ṣ", "ض": "ḍ", "ط": "ṭ", "ظ": "dH", "ل": "l", "ن": "n",
 }
-TRANSLIT_MARKS = set("ًٌٍَُِّْٰـ")
 VOWELS = {"a", "u", "i", "an", "un", "in", "aa", "ee", "oo", "Aa"}
-MARKS = set(SHORT_VOWELS) | {"\u0651", "\u0652", "\u0670", "\u0640"}
 
 
 def _next_is_vowel(chars, index):
     for later in chars[index + 1:]:
-        if later in MARKS:
+        if later in TRANSLIT_MARKS:
             return later in SHORT_VOWELS
         return False
     return False
