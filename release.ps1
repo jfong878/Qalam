@@ -80,8 +80,12 @@ function Assert-BuildArtifacts {
     if ([string]$manifest.version -ne $Version) {
         throw ('latest.json version is ' + $manifest.version + ', expected ' + $Version + '.')
     }
-    if ([string]$manifest.url -ne (Split-Path -Leaf $setupPath)) {
-        throw ('latest.json url is ' + $manifest.url + ', expected ' + (Split-Path -Leaf $setupPath) + '.')
+    # The manifest carries the absolute versioned URL, so a lagging
+    # /releases/latest alias cannot turn an update check into a 404.
+    $leaf = Split-Path -Leaf $setupPath
+    $expectedUrl = 'https://github.com/jfong878/Qalam/releases/download/v' + $Version + '/' + $leaf
+    if ([string]$manifest.url -ne $expectedUrl -and [string]$manifest.url -ne $leaf) {
+        throw ('latest.json url is ' + $manifest.url + ', expected ' + $expectedUrl + '.')
     }
 
     $setup = Get-Item -LiteralPath $setupPath
