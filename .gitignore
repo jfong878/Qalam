@@ -5,6 +5,7 @@ build/
 
 # Local run artifacts
 .launch-check/
+.tools/
 
 # Multi-GB corpora and downloads (regenerable, kept out of git)
 downloads/

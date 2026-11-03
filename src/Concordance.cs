@@ -34,6 +34,8 @@ namespace Qalam
         public ConcordancePair Pair;
         public double Score;
         public bool Exact;
+        // 0..1 spoken-register estimate; see Register.cs.
+        public double Register;
     }
 
     internal static class ConcordanceText
@@ -308,6 +310,8 @@ namespace Qalam
                 if (compare != 0) return compare;
                 return string.Compare(a.Pair.Source, b.Pair.Source, StringComparison.Ordinal);
             });
+
+            Register.Rerank(hits, max, SourceLang, TargetLang, queryTokens);
 
             if (hits.Count > max) hits.RemoveRange(max, hits.Count - max);
             return hits;
@@ -673,6 +677,7 @@ namespace Qalam
                 example.FromConcordance = true;
                 example.Origin = hit.Pair.Corpus;
                 example.License = hit.Pair.License;
+                example.Register = hit.Register;
                 results.Add(example);
             }
             return results;

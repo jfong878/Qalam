@@ -47,6 +47,17 @@ function New-Shortcut([string]$Path, [string]$Target, [string]$WorkDir, [string]
     $shortcut.Save()
 }
 
+function Copy-MsvcRuntime {
+    $pymupdfDir = Join-Path $tashkeelDest '.venv\Lib\site-packages\pymupdf'
+    $scriptsDir = Join-Path $tashkeelDest '.venv\Scripts'
+    if (-not (Test-Path -LiteralPath $pymupdfDir)) { return }
+    if (-not (Test-Path -LiteralPath $scriptsDir)) { return }
+    foreach ($pattern in @('msvcp140*.dll', 'vcruntime140*.dll', 'concrt140.dll')) {
+        Get-ChildItem -LiteralPath $scriptsDir -Filter $pattern -File -ErrorAction SilentlyContinue |
+            Copy-Item -Destination $pymupdfDir -Force
+    }
+}
+
 if (-not $SkipBuild) {
     & (Join-Path $root 'build.ps1')
     if ($LASTEXITCODE -ne 0) { throw "Build failed with exit code $LASTEXITCODE" }
@@ -75,6 +86,7 @@ Copy-Item -Path (Join-Path $root 'mobile\*') -Destination $mobileDest -Force
 # download endpoint can build a fresh package without the source checkout.
 Copy-Item -LiteralPath (Join-Path $root 'install.ps1') -Destination $dest -Force
 Copy-Item -LiteralPath (Join-Path $root 'uninstall.ps1') -Destination $dest -Force
+Copy-Item -LiteralPath (Join-Path $root 'update.ps1') -Destination $dest -Force
 Copy-Item -LiteralPath (Join-Path $root 'README.md') -Destination $dest -Force
 
 # Bundled character dictionary (Unihan). The stroke outlines are cached per
@@ -121,6 +133,8 @@ if (-not $pypinyinOk) {
     if ($LASTEXITCODE -ne 0) { throw "pip install failed with exit code $LASTEXITCODE" }
 }
 
+Copy-MsvcRuntime
+
 $pymupdfOk = $false
 try {
     & $venvPython -c "import pymupdf" 2>$null
@@ -130,6 +144,7 @@ if (-not $pymupdfOk) {
     Write-Host 'Installing PyMuPDF for PDF document translation ...'
     & $venvPython -m pip install --quiet --disable-pip-version-check -r (Join-Path $documentsDest 'requirements.txt')
     if ($LASTEXITCODE -ne 0) { throw "pip install failed with exit code $LASTEXITCODE" }
+    Copy-MsvcRuntime
 }
 
 $startupShortcut = Join-Path ([Environment]::GetFolderPath('Startup')) 'Qalam.lnk'

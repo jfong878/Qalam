@@ -1,2 +1,3 @@
 mishkal==0.4.1
 pypinyin==0.55.0
+msvc-runtime==14.51.36231

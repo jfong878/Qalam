@@ -180,6 +180,8 @@ namespace Qalam
                 if (compare != 0) return compare;
                 return string.Compare(a.Pair.Source, b.Pair.Source, StringComparison.Ordinal);
             });
+            Register.Rerank(hits, max, _sourceLang, _targetLang, queryTokens);
+
             if (hits.Count > max) hits.RemoveRange(max, hits.Count - max);
             return hits;
         }

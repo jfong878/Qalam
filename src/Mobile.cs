@@ -763,6 +763,8 @@ namespace Qalam
                     CopyFile(install, Path.Combine(stage, "install.ps1"));
                     string uninstall = FindFile("uninstall.ps1");
                     if (uninstall != null) CopyFile(uninstall, Path.Combine(stage, "uninstall.ps1"));
+                    string updater = FindFile("update.ps1");
+                    if (updater != null) CopyFile(updater, Path.Combine(stage, "update.ps1"));
                     string readme = FindFile("README.md");
                     if (readme != null) CopyFile(readme, Path.Combine(stage, "README.md"));
 
@@ -807,39 +809,35 @@ namespace Qalam
 
         private static string FindFile(string name)
         {
-            string[] candidates = new string[]
-            {
-                Path.Combine(Paths.AppDir, name),
-                Path.Combine(Paths.DataDir, name)
-            };
-            for (int i = 0; i < candidates.Length; i++)
-                if (File.Exists(candidates[i])) return candidates[i];
+            string path = Path.Combine(Paths.AppDir, name);
+            if (File.Exists(path)) return path;
 
             DirectoryInfo parent = Directory.GetParent(Paths.AppDir);
             if (parent != null)
             {
-                string path = Path.Combine(parent.FullName, name);
+                path = Path.Combine(parent.FullName, name);
                 if (File.Exists(path)) return path;
             }
+
+            path = Path.Combine(Paths.DataDir, name);
+            if (File.Exists(path)) return path;
             return null;
         }
 
         private static string FindDirectory(string name)
         {
-            string[] candidates = new string[]
-            {
-                Path.Combine(Paths.AppDir, name),
-                Path.Combine(Paths.DataDir, name)
-            };
-            for (int i = 0; i < candidates.Length; i++)
-                if (Directory.Exists(candidates[i])) return candidates[i];
+            string path = Path.Combine(Paths.AppDir, name);
+            if (Directory.Exists(path)) return path;
 
             DirectoryInfo parent = Directory.GetParent(Paths.AppDir);
             if (parent != null)
             {
-                string path = Path.Combine(parent.FullName, name);
+                path = Path.Combine(parent.FullName, name);
                 if (Directory.Exists(path)) return path;
             }
+
+            path = Path.Combine(Paths.DataDir, name);
+            if (Directory.Exists(path)) return path;
             return null;
         }
 

@@ -60,6 +60,9 @@ namespace Qalam
             if (args.Any(a => string.Equals(a, "--concordancetest", StringComparison.OrdinalIgnoreCase)))
                 return ConcordanceSelfTest.Run(args);
 
+            if (args.Any(a => string.Equals(a, "--registertest", StringComparison.OrdinalIgnoreCase)))
+                return RegisterSelfTest.Run(args);
+
             if (args.Any(a => string.Equals(a, "--selftest", StringComparison.OrdinalIgnoreCase)))
                 return SelfTest.Run(args);
 
@@ -107,6 +110,7 @@ namespace Qalam
 
                 var application = new System.Windows.Application();
                 application.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                application.Exit += delegate { UpdateService.InstallPendingOnExit(); };
                 application.DispatcherUnhandledException += delegate(object sender, DispatcherUnhandledExceptionEventArgs e)
                 {
                     Logger.Write("ui: " + e.Exception);
@@ -256,6 +260,8 @@ namespace Qalam
 
     public sealed class Config
     {
+        private const string DefaultUpdateUrl = "https://github.com/jfong878/qalam-releases/releases/latest/download/latest.json";
+
         public bool AutoTarget { get; set; }
         public string Target { get; set; }
         public int DoubleCopyWindowMs { get; set; }
@@ -266,6 +272,10 @@ namespace Qalam
         public bool MobileEnabled { get; set; }
         public int MobilePort { get; set; }
         public string MobileToken { get; set; }
+        // HTTPS address of latest.json. The default is the public GitHub
+        // release feed; an explicit empty value disables automatic checks.
+        public string UpdateUrl { get; set; }
+        public bool AutoUpdate { get; set; }
         public bool LocalModelEnabled { get; set; }
         public string LocalModelEndpoint { get; set; }
         public string LocalModelName { get; set; }
@@ -288,6 +298,8 @@ namespace Qalam
             MobileEnabled = false;
             MobilePort = 8787;
             MobileToken = "";
+            UpdateUrl = DefaultUpdateUrl;
+            AutoUpdate = true;
             LocalModelEnabled = true;
             LocalModelEndpoint = "http://127.0.0.1:11434";
             LocalModelName = "";
@@ -314,6 +326,11 @@ namespace Qalam
                         if (cfg.SyncFolder == null) cfg.SyncFolder = "";
                         if (cfg.MobilePort < 1024 || cfg.MobilePort > 65535) cfg.MobilePort = 8787;
                         if (cfg.MobileToken == null) cfg.MobileToken = "";
+                        bool addUpdateUrl = json.IndexOf("\"UpdateUrl\"", StringComparison.OrdinalIgnoreCase) < 0;
+                        if (addUpdateUrl) cfg.UpdateUrl = DefaultUpdateUrl;
+                        else if (cfg.UpdateUrl == null) cfg.UpdateUrl = DefaultUpdateUrl;
+                        bool addAutoUpdate = json.IndexOf("\"AutoUpdate\"", StringComparison.OrdinalIgnoreCase) < 0;
+                        if (addAutoUpdate) cfg.AutoUpdate = true;
                         // Existing config files predate the on-device model. Keep
                         // the new path on unless the user explicitly turned it off.
                         if (json.IndexOf("\"LocalModelEnabled\"", StringComparison.OrdinalIgnoreCase) < 0)
@@ -326,7 +343,7 @@ namespace Qalam
                         cfg.TranslationMode = TranslationService.NormalizeMode(cfg.TranslationMode);
                         cfg.Theme = ThemeManager.Normalize(cfg.Theme);
                         Paths.SyncFolder = cfg.SyncFolder;
-                        if (addTranslationMode || addTheme) cfg.Save();
+                        if (addTranslationMode || addTheme || addUpdateUrl || addAutoUpdate) cfg.Save();
                         return cfg;
                     }
                 }
@@ -1192,6 +1209,8 @@ namespace Qalam
         public bool FromConcordance;
         public string Origin;
         public string License;
+        // 0..1 spoken-register estimate for a corpus line (Register.cs).
+        public double Register;
     }
 
     internal sealed class ContextService
@@ -2370,6 +2389,7 @@ namespace Qalam
                 menu.Items.Add(item);
             }
 
+
             menu.Opened += delegate
             {
                 // A ContextMenu takes activation away from the popup. Keep the
@@ -2868,6 +2888,7 @@ namespace Qalam
         private uint _pendingSequence;
         private bool _documentRunning;
         private bool _disposed;
+        private DispatcherTimer _updateTimer;
 
         public AppController(bool background)
         {
@@ -2895,6 +2916,7 @@ namespace Qalam
             _trayIcon = CreateTrayIcon();
             CreateTray();
             if (_config.MobileEnabled) StartMobile(true);
+            StartUpdateChecks();
 
             _hook = new KeyboardHook(_config.DoubleCopyWindowMs);
             _hook.DoubleCopy += OnDoubleCopy;
@@ -2916,6 +2938,28 @@ namespace Qalam
             });
 
             if (!background) ShowMainWindow();
+        }
+
+        private void StartUpdateChecks()
+        {
+            if (!_config.AutoUpdate || string.IsNullOrWhiteSpace(_config.UpdateUrl)) return;
+
+            // Check once after startup, then keep checking while the tray app
+            // remains open. This is what makes a release reach users who leave
+            // Qalam running instead of restarting it every day.
+            Task.Delay(TimeSpan.FromSeconds(12)).ContinueWith(delegate
+            {
+                if (!_disposed) UpdateService.CheckAndDownload(_config, false);
+            });
+
+            _updateTimer = new DispatcherTimer();
+            _updateTimer.Interval = TimeSpan.FromHours(6);
+            _updateTimer.Tick += delegate
+            {
+                if (!_disposed) UpdateService.CheckAndDownload(_config, false);
+            };
+            _updateTimer.Start();
+            Logger.Write("automatic update checks enabled (startup + every 6 hours)");
         }
 
         private void OnSystemThemeChanged(object sender, EventArgs e)
@@ -3550,10 +3594,17 @@ namespace Qalam
             WinForms.ToolStripMenuItem publicLink = new WinForms.ToolStripMenuItem("Copy public HTTPS link (Cloudflare)");
             publicLink.Click += delegate { TogglePublicLink(); };
             menu.Items.Add(publicLink);
+            WinForms.ToolStripMenuItem installUpdate = new WinForms.ToolStripMenuItem("Restart to update…");
+            installUpdate.Visible = false;
+            installUpdate.Click += delegate { UpdateService.InstallPending(true); };
+
             menu.Opened += delegate
             {
                 mobile.Checked = _mobile != null;
                 publicLink.Checked = _tunnel != null;
+                installUpdate.Visible = UpdateService.HasPendingUpdate;
+                if (UpdateService.HasPendingUpdate)
+                    installUpdate.Text = "Restart to update to " + UpdateService.PendingVersionText + "\u2026";
             };
 
             menu.Items.Add(BuildFavoritesMenu());
@@ -3561,6 +3612,12 @@ namespace Qalam
             menu.Items.Add(BuildTargetMenu());
             menu.Items.Add(BuildProviderMenu());
             menu.Items.Add(new WinForms.ToolStripSeparator());
+
+            WinForms.ToolStripMenuItem updates = new WinForms.ToolStripMenuItem("Check for updates\u2026");
+            updates.Click += delegate { UpdateService.CheckAndDownload(_config, true); };
+            menu.Items.Add(updates);
+            menu.Items.Add(installUpdate);
+
 
             WinForms.ToolStripMenuItem config = new WinForms.ToolStripMenuItem("Open config");
             config.Click += delegate
@@ -4006,6 +4063,15 @@ namespace Qalam
         {
             if (_disposed) return;
             _disposed = true;
+            try
+            {
+                if (_updateTimer != null)
+                {
+                    _updateTimer.Stop();
+                    _updateTimer = null;
+                }
+            }
+            catch { }
             ThemeManager.SystemThemeChanged -= OnSystemThemeChanged;
             ThemeManager.UnwatchSystem();
             try { _hook.Dispose(); }

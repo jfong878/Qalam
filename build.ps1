@@ -53,6 +53,7 @@ $cscArgs = @(
     (Join-Path $root 'src\Grammar.cs')
     (Join-Path $root 'src\Concordance.cs')
     (Join-Path $root 'src\DiskConcordance.cs')
+    (Join-Path $root 'src\Register.cs')
     (Join-Path $root 'src\TranslationCompare.cs')
     (Join-Path $root 'src\SingleInstance.cs')
     (Join-Path $root 'src\MainWindow.cs')
@@ -66,6 +67,8 @@ $cscArgs = @(
     (Join-Path $root 'src\Study.cs')
     (Join-Path $root 'src\StudyWindow.cs')
     (Join-Path $root 'src\Mobile.cs')
+    (Join-Path $root 'src\Updates.cs')
+    (Join-Path $root 'src\AssemblyInfo.cs')
 )
 
 & $csc @cscArgs

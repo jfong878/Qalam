@@ -60,46 +60,97 @@ not a Qalam account.
 
 ## Install
 
-From this folder:
+Download and run `Qalam-Setup-<version>.exe`. The current public, unsigned build is
+published at <https://github.com/jfong878/qalam-releases/releases/latest>.
+
+This is a one-click, per-user installer (no UAC) modeled on the OmniPDF release: it installs to
+`%LOCALAPPDATA%\Qalam`, creates Start Menu, Startup, and desktop shortcuts,
+backs up and disables Reverso's autostart entry, and installs the Python
+environment for Tashkeel and PDF translation. It never uninstalls Reverso or
+edits Reverso's files.
+
+The setup runs the same idempotent `install.ps1` used by the developer path, so
+re-running it upgrades the executable and preserves `config.json`, history,
+favorites, study data, and concordance packs. Uninstall from
+**Settings > Apps > Installed apps > Qalam** (or run `Uninstall Qalam.exe`).
+
+For development, the old source-tree path still works:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1
 ```
 
-The installer:
+### Build the installer
 
-- builds `Qalam.exe` with the .NET Framework compiler that ships with Windows,
-- copies the app to `%LOCALAPPDATA%\Qalam`,
-- copies the PDF bridge to `%LOCALAPPDATA%\Qalam\documents`,
-- copies the browser/mobile client to `%LOCALAPPDATA%\Qalam\mobile`,
-- keeps `install.ps1`, `uninstall.ps1`, and this README beside the installed app so the
-  browser's Windows download endpoint can rebuild its package without the source tree,
-- copies the seeded, 100k core-language, and 2M depth concordance packs, plus their `.qidx` indexes, to
-  `%LOCALAPPDATA%\Qalam\concordance` (existing packs with the same name are left alone),
-- copies the bundled Unihan character table to `%LOCALAPPDATA%\Qalam\data`,
-- creates `%LOCALAPPDATA%\Qalam\tashkeel\.venv` and installs `mishkal`, `pypinyin`, and
-  PyMuPDF there,
-- adds `Qalam.lnk` to the user Startup folder (with `--background`) and the Start Menu,
-- **backs up and disables Reverso's autostart entry**, and closes a running Reverso so
-  the two popups do not compete,
-- starts Qalam.
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File build-installer.ps1
+```
 
-It never uninstalls Reverso and never edits Reverso's files. The original autostart
-value is stored in `%LOCALAPPDATA%\Qalam\reverso-autostart-backup.json`. Reverso is not
-needed at runtime and can be uninstalled separately; Qalam was verified after removing
-it from this machine.
+This builds `dist/Qalam.exe`, stages the same payload used by the portable
+installer, downloads the pinned NSIS 3.11 compiler into `.tools/` on first use,
+and produces:
 
-Options:
+- `dist/Qalam-Setup-<version>.exe` — one-click per-user setup
+- `dist/Qalam-Windows.zip` — portable/source-tree package
+- `dist/latest.json` — update manifest used by Qalam
+- `dist/latest.yml` — equivalent generic-feed metadata
 
-| Switch | Effect |
-| --- | --- |
-| `-KeepReversoAutostart` | Leave Reverso's `HKCU\...\Run` entry untouched |
-| `-KeepReversoRunning` | Do not close the running Reverso process |
-| `-NoLaunch` | Install without starting Qalam |
-| `-SkipBuild` | Copy the existing `dist\Qalam.exe` |
+The setup is unsigned by default, so Windows SmartScreen will warn until a
+code-signing certificate is configured.
 
-Re-running the installer is safe: it updates the executable, reuses the virtual
-environment, and does not overwrite the original Reverso backup.
+For each release, use the release script. It updates `src/AssemblyInfo.cs`,
+builds with the same version, creates a draft, verifies every asset, publishes
+it as the latest release, then downloads the public feed and installer again to
+verify their hashes:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File release.ps1 `
+  -Version 1.0.1 `
+  -Notes "What changed in this release."
+```
+
+Use `-BuildOnly` to prepare and inspect a build without publishing. If the
+publish step is interrupted after the draft is created, rerun with
+`-PublishOnly -Resume` using the same version; the incomplete draft is replaced
+and rebuilt before publishing. `-Notes` is required. The build phase refuses to
+reuse or lower the current assembly version; `-PublishOnly` requires artifacts
+already built at the requested version.
+
+## Updates
+
+Qalam checks a generic HTTPS feed shortly after startup, every six hours while
+it remains running, and from **tray → Check for updates…**. Fresh installs
+default to the public GitHub release feed:
+`https://github.com/jfong878/qalam-releases/releases/latest/download/latest.json`.
+Override `UpdateUrl` in `config.json` to use another HTTPS `latest.json`
+manifest, or set it to an empty string to disable automatic checks:
+
+```json
+{
+  "version": "1.0.1",
+  "url": "Qalam-Setup-1.0.1.exe",
+  "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "size": 8863398,
+  "notes": "What changed in this release.",
+  "mandatory": false
+}
+```
+
+The URL may be relative to the manifest. Qalam downloads the setup into
+`%LOCALAPPDATA%\Qalam\updates`, verifies its SHA-256, and reports
+**"Restart to update"** in the tray. The setup installs silently when Qalam
+quits, or immediately if you choose **Restart now**. `update.ps1` waits for the
+running app, verifies the installer again, runs it with `/S`, and restarts only
+when requested. Existing user data is preserved by the installer.
+
+Upload `Qalam-Setup-<version>.exe` and `latest.json` to the same HTTPS
+directory. `latest.yml` is generated for feed parity with the OmniPDF-style
+release layout; Qalam itself reads `latest.json`.
+
+The manifest must be served over HTTPS. HTTP is accepted only for loopback
+testing. The hash protects against a corrupted or mismatched download; it does
+not replace a code-signing certificate because the manifest is served by the
+update host. Use a protected host and sign the setup before public distribution.
 
 ## Requirements
 
@@ -129,6 +180,8 @@ environment, and does not overwrite the original Reverso backup.
 | `MobileEnabled` | `false` | Start the browser/mobile server with the app |
 | `MobilePort` | `8787` | LAN port; Qalam tries the next free port if this one is taken |
 | `MobileToken` | `""` | Generated random token required by the browser client; treat it as a local password |
+| `UpdateUrl` | GitHub release feed | HTTPS URL of the update manifest; empty disables automatic checks |
+| `AutoUpdate` | `true` | Check shortly after startup and every six hours while running |
 | `LocalModelEnabled` | `true` | Enable local Ollama for slang and `offline` mode |
 | `LocalModelEndpoint` | `"http://127.0.0.1:11434"` | Ollama API base URL |
 | `LocalModelName` | `""` | Optional exact model name; blank auto-selects an installed chat model |
@@ -281,6 +334,14 @@ tatweel. Arabic conjunction and article prefixes are stemmed, so `كتاب` find
 coverage, a readable sentence length, and target words from the selected translation. The translation hint is only
 a ranking signal, so a noisy alignment can still appear; the section is labelled with
 its corpus and license.
+
+Within that order, lines that read as spoken dialogue rank above flat prose. A
+per-language lexicon of colloquial markers (particles, address terms, interjections,
+profanity, dialect forms) and of formal markers (polite pronouns, honorifics,
+official phrasing) scores each candidate, together with structural cues such as
+hesitations. The bonus is bounded: it reorders lines with the same match, and an
+exact phrase match still wins outright. `Qalam.exe --registertest --pack` prints the
+scores and checks every language the app ships.
 
 ### Build a larger pack
 
@@ -573,6 +634,7 @@ Android binary.
 | `assets/` | Qaaf mark (PNG sizes and `qalam.ico`) and `make_logo.py` |
 | `build.ps1` | Compiles with the in-box C# 5 compiler |
 | `install.ps1` / `uninstall.ps1` | Per-user install and takeover / restore |
+| `update.ps1` | Out-of-process updater: waits for Qalam to exit, verifies the setup hash, installs, and restarts |
 | `selftest/` | Rendered popup PNGs, trigger harness, and [real-app tests](selftest/APP-TESTS.md) |
 | `concordance/*.tsv` | Seed, depth, slang, and dialect sentence-pair packs copied by the installer |
 | `concordance/*.tsv.qidx` | Disk-backed indexes for the depth packs |
