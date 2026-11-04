@@ -1849,6 +1849,39 @@ def _replace_tounicode(doc, font_xref, mapping):
     doc.update_stream(tounicode_xref, "\r\n".join(lines).encode("latin1"))
 
 
+def _wrap_actual_text(doc, page, before_contents, text):
+    """Mark one inserted HTML block with the exact text it represents.
+
+    A font's ToUnicode map cannot distinguish, for example, Calibri's shared
+    Arabic base glyph used with different dot components, or an Indic
+    contextual form. PDF ActualText operates at the page-content level and
+    gives readers the logical text without changing what is drawn.
+    """
+    value = str(text or "")
+    if not value:
+        return 0
+    new_streams = [
+        xref for xref in page.get_contents()
+        if xref not in set(before_contents)
+    ]
+    if not new_streams:
+        return 0
+    encoded = ("\ufeff" + value).encode("utf-16-be").hex().upper()
+    prefix = ("/Span << /ActualText <%s> >> BDC\n" % encoded).encode("latin1")
+    suffix = b"\nEMC\n"
+    wrapped = 0
+    for xref in new_streams:
+        try:
+            content = doc.xref_stream(xref)
+            if not content:
+                continue
+            doc.update_stream(xref, prefix + content + suffix)
+            wrapped += 1
+        except Exception:
+            continue
+    return wrapped
+
+
 def repair_copy_layer(doc, texts, target):
     """Rebuild ToUnicode for glyphs whose real text differs from the font cmap.
 
@@ -2103,6 +2136,7 @@ def apply_translations(input_path, translations_path, output_path, blocks_path=N
                     font_name, current_size, color, current_line_height, align,
                     bool(flags & 16), bool(flags & 2), direction,
                 )
+                before_contents = page.get_contents()
                 try:
                     spare, _ = page.insert_htmlbox(
                         bbox, html, css=css, archive=archive, scale_low=1.0
@@ -2113,6 +2147,8 @@ def apply_translations(input_path, translations_path, output_path, blocks_path=N
                 if spare >= 0:
                     fitted = True
                     inserted += 1
+                    if not _wrap_actual_text(doc, page, before_contents, translation):
+                        failed.append("%s: copy text was not marked" % block_id)
                     break
 
             if not fitted:
@@ -2124,6 +2160,7 @@ def apply_translations(input_path, translations_path, output_path, blocks_path=N
                     font_name, size, color, line_height, block.get("Align", "left"),
                     bool(flags & 16), bool(flags & 2), direction,
                 )
+                before_contents = page.get_contents()
                 try:
                     spare, _ = page.insert_htmlbox(
                         bbox, source_html, css=source_css, archive=archive, scale_low=0.80
@@ -2133,6 +2170,8 @@ def apply_translations(input_path, translations_path, output_path, blocks_path=N
                 if spare < 0:
                     failed.append("%s: translation did not fit; no text inserted" % block_id)
                 else:
+                    if not _wrap_actual_text(doc, page, before_contents, block.get("Text", "")):
+                        failed.append("%s: copy text was not marked" % block_id)
                     failed.append("%s: translation did not fit; original passage kept" % block_id)
 
         line_boxes = []

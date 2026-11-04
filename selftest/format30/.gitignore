@@ -1,0 +1,7 @@
+*.pdf
+!source.pdf
+*.report.txt
+*.stdout.txt
+*.png
+run/
+release-run/

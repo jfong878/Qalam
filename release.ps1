@@ -64,6 +64,21 @@ function Get-Manifest {
     return [IO.File]::ReadAllText($manifestPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
 }
 
+function Invoke-FormatSuite {
+    $python = Get-Command python.exe -ErrorAction SilentlyContinue
+    if (-not $python) { throw 'Python is required for the PDF formatting release gate.' }
+    $suite = Join-Path $root 'selftest\format_suite.py'
+    $fixture = Join-Path $root 'selftest\format30\source.pdf'
+    if (-not (Test-Path -LiteralPath $suite)) { throw ('Formatting suite missing: ' + $suite) }
+    if (-not (Test-Path -LiteralPath $fixture)) { throw ('Formatting fixture missing: ' + $fixture) }
+    $suiteOut = Join-Path $root 'selftest\format30\release-run'
+    Write-Step 'Running the 15-language PDF formatting suite'
+    & $python.Source $suite --exe $exePath --fixture $fixture --out $suiteOut
+    if ($LASTEXITCODE -ne 0) {
+        throw 'PDF formatting suite failed; refusing to publish the release.'
+    }
+}
+
 function Assert-BuildArtifacts {
     foreach ($path in @($exePath, $setupPath, $manifestPath, $ymlPath)) {
         if (-not (Test-Path -LiteralPath $path)) {
@@ -162,6 +177,10 @@ else {
 
 $verified = Assert-BuildArtifacts
 Write-Step ('Verified setup: ' + $verified.Size + ' bytes, SHA-256 ' + $verified.Sha256)
+
+# This is a release gate, not a post-release check. It runs against the exact
+# binary and payload that were just built, before any draft is uploaded.
+Invoke-FormatSuite
 
 if ($BuildOnly) {
     Write-Host ''

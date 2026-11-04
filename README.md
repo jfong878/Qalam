@@ -112,6 +112,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File release.ps1 `
   -Notes "What changed in this release."
 ```
 
+The release script also runs the 13-block, 15-language PDF formatting suite
+from `selftest/format_suite.py` against the built `dist/Qalam.exe`; any layout,
+font, report, or copy-text failure stops the release before a draft is created.
+Run it directly when iterating on the PDF path:
+
+```powershell
+python selftest/format_suite.py --exe dist/Qalam.exe
+```
+
 Use `-BuildOnly` to prepare and inspect a build without publishing. If the
 publish step is interrupted after the draft is created, rerun with
 `-PublishOnly -Resume` using the same version; the incomplete draft is replaced
