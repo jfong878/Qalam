@@ -52,6 +52,10 @@ The Transliteration line now follows the pronunciation register you chose, so a 
 
 Unvocalized input is read by context: a bare ان with no shadda is the conditional In, not anna, so ان شاء الله بعد بخلص من الشغل اليوم becomes In Shaa' Allaah ba'd bakhalliṣ min ash-Shughl il-Yawm. Formulae such as In Shaa' Allaah, Bismillaah, Al-Ḥamdu lillaah, As-Salaamu 'alaykum, Maa Shaa' Allaah, Subḥaan Allaah, Allaahu Akbar and Laa ilaaha illaa Allaah keep their Fuṣḥā shape in every register; a preposition keeps the plain article after it (min ash-shughul) while the genitive i still carries onto a following article (ash-Shughl il-Yawm).
 
+## 1.0.31 — 2026-11-04
+
+PDF translations now preserve exact copy text for Arabic, Hebrew, Persian, Urdu, Hindi, and Thai. Every inserted translation carries PDF ActualText, so readers that support marked content copy the translation instead of the font's shared glyphs or contextual forms. The 13-block, 15-language formatting suite now runs against the built executable before any release draft is created and refuses the release on a layout, font, report, or copy-text regression; the fixture and runner ship with the test suite.
+
 ## 1.0.30 — 2026-11-04
 
 Arabic PDFs now copy as standard Arabic instead of PUA placeholders. Qalam rebuilds each translated font's ToUnicode map from its actual HarfBuzz glyph clusters, so ligatures copy as their real letters and the separate dot glyphs are dropped on read-back. The page rendering and the source font stay unchanged, and English-to-Arabic followed by Arabic-to-English now round-trips with clean text. The PDF helper now installs `uharfbuzz` and `fonttools` alongside PyMuPDF for this repair.
