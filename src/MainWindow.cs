@@ -536,6 +536,35 @@ namespace Qalam
             }
         }
 
+        public void ShowFromPopup(TranslationResult result)
+        {
+            if (result == null) return;
+            try
+            {
+                // Opening an existing result must not trigger a second network
+                // translation or add another history entry. It also cancels any
+                // request that the main window already had in flight.
+                _requestId++;
+                _busy = false;
+                if (_translateButton != null) _translateButton.IsEnabled = true;
+                _input.Text = result.SourceText ?? "";
+                UpdatePlaceholder();
+                _currentResult = result;
+                _lastTranslation = result.Translation ?? "";
+                if (_tashkeelCard != null) _tashkeelCard.Visibility = Visibility.Collapsed;
+                if (_grammarCard != null) _grammarCard.Visibility = Visibility.Collapsed;
+                if (_wordingCard != null) _wordingCard.Visibility = Visibility.Collapsed;
+                ShowResult(result);
+                _status.Text = "Opened from the compact pop-up.";
+                _status.Foreground = Ui.Muted;
+                Activate();
+            }
+            catch (Exception ex)
+            {
+                Logger.Write("main show popup result: " + ex.Message);
+            }
+        }
+
         public void RefreshTarget()
         {
             UpdateTargetButton();

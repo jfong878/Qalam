@@ -331,10 +331,21 @@ namespace Qalam
             string source = NormalizeCode(sourceLanguage);
             if (source == "ar")
             {
-                if (FindArabicMatches(text).Count > 0) return true;
-                foreach (ColloquialToken token in Tokenize(text))
-                    if (token.IsWord && ArabicMarkers.Contains(token.Folded)) return true;
-                return false;
+                List<ColloquialToken> tokens = Tokenize(text);
+                List<int> words = WordIndexes(tokens);
+                if (words.Count == 0) return false;
+
+                // One dialect token inside a formal sentence (for example "طيب"
+                // in a passage about religious knowledge) must not send the whole
+                // passage to the slang model. Short colloquial queries still take
+                // that path; longer text needs a substantial dialect signal.
+                int signalWords = 0;
+                foreach (ArabicMatch match in FindArabicMatches(text))
+                    signalWords += match.WordCount;
+                foreach (ColloquialToken token in tokens)
+                    if (token.IsWord && ArabicMarkers.Contains(token.Folded)) signalWords++;
+                if (signalWords == 0) return false;
+                return words.Count <= 4 || signalWords * 3 >= words.Count;
             }
             if (FindMatches(text, sourceLanguage).Count > 0) return true;
 

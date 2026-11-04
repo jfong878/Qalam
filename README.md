@@ -32,7 +32,9 @@ see [ANALYSIS.md](ANALYSIS.md).
    - **grammar and conjugation** for single words from Wiktionary via Kaikki, cached
      locally so recently viewed cards work in offline mode,
    - a **target-language selector** in the popup itself,
-   - **Listen** buttons for pronunciation and copy buttons for the text.
+   - **Listen** buttons for pronunciation and copy buttons for the text,
+   - a **View in App** action that opens the full window with the current source
+     and translation.
 
 Arabic source text is vocalized directly. English (or other) source translated to Arabic
 gets tashkeel on the Arabic translation. If you force **Arabic → Arabic**, Qalam skips

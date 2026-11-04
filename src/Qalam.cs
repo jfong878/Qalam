@@ -927,21 +927,16 @@ namespace Qalam
                 }
             }
 
-            Task<TranslationOutcome> single = TranslateSingleOnceAsync(text, target);
-            Task<TranslationOutcome> dictionary = TranslateDictionaryAsync(text, target);
+            // The normal Google translation endpoint is the quality path for
+            // sentences. The dictionary endpoint is a fallback, not a race: on
+            // ambiguous Arabic clauses it can turn an adjective into a name or
+            // detach "honoring parents" from its object.
+            string onlineSource = ArabicText.ContainsArabic(text) ? "ar" : detected;
+            if (string.IsNullOrEmpty(onlineSource)) onlineSource = "auto";
             Exception last = null;
-
-            // Run both Google shapes at once; whichever answers first wins. A slow
-            // or throttled endpoint therefore cannot hold the popup hostage.
-            Task<TranslationOutcome> first = await Task.WhenAny(single, dictionary).ConfigureAwait(false);
-            Task<TranslationOutcome> second = first == single ? dictionary : single;
-#pragma warning disable 4014
-            second.ContinueWith(t => { GC.KeepAlive(t.Exception); }, TaskContinuationOptions.OnlyOnFaulted);
-#pragma warning restore 4014
-
             try
             {
-                return await first.ConfigureAwait(false);
+                return await TranslateSingleOnceAsync(text, onlineSource, target).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -951,7 +946,7 @@ namespace Qalam
 
             try
             {
-                return await second.ConfigureAwait(false);
+                return await TranslateDictionaryAsync(text, onlineSource, target).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -960,7 +955,9 @@ namespace Qalam
             }
 
             string source = detected;
-            if (string.IsNullOrEmpty(source))
+            if (string.IsNullOrEmpty(source) || string.Equals(source, "auto", StringComparison.OrdinalIgnoreCase))
+                source = onlineSource;
+            if (string.IsNullOrEmpty(source) || string.Equals(source, "auto", StringComparison.OrdinalIgnoreCase))
                 source = ArabicText.ContainsArabic(text) ? "ar" : "en";
             if (text.Length <= 450 && !string.Equals(source, target, StringComparison.OrdinalIgnoreCase))
             {
@@ -995,14 +992,14 @@ namespace Qalam
             throw new InvalidOperationException("All translation endpoints failed. " + (last != null ? last.Message : ""), last);
         }
 
-        private async Task<TranslationOutcome> TranslateSingleOnceAsync(string text, string target)
+        private async Task<TranslationOutcome> TranslateSingleOnceAsync(string text, string source, string target)
         {
             string json;
             if (text.Length > 400)
             {
                 Dictionary<string, string> values = new Dictionary<string, string>();
                 values["client"] = "gtx";
-                values["sl"] = "auto";
+                values["sl"] = source;
                 values["tl"] = target;
                 values["dt"] = "t";
                 values["q"] = text;
@@ -1015,14 +1012,15 @@ namespace Qalam
             }
             else
             {
-                string url = SingleEndpoint + "?client=gtx&sl=auto&tl=" + Uri.EscapeDataString(target) +
+                string url = SingleEndpoint + "?client=gtx&sl=" + Uri.EscapeDataString(source) +
+                             "&tl=" + Uri.EscapeDataString(target) +
                              "&dt=t&dt=bd&q=" + Uri.EscapeDataString(text);
                 json = await _http.GetStringAsync(url).ConfigureAwait(false);
             }
             return ParseSingle(json);
         }
 
-        private async Task<TranslationOutcome> TranslateDictionaryAsync(string text, string target)
+        private async Task<TranslationOutcome> TranslateDictionaryAsync(string text, string source, string target)
         {
             string json;
             if (text.Length > 400)
@@ -1031,7 +1029,7 @@ namespace Qalam
                 values["client"] = "dict-chrome-ex";
                 values["ie"] = "UTF-8";
                 values["oe"] = "UTF-8";
-                values["sl"] = "auto";
+                values["sl"] = source;
                 values["tl"] = target;
                 values["q"] = text;
                 using (FormUrlEncodedContent body = new FormUrlEncodedContent(values))
@@ -1043,8 +1041,9 @@ namespace Qalam
             }
             else
             {
-                string url = DictionaryEndpoint + "?client=dict-chrome-ex&ie=UTF-8&oe=UTF-8&sl=auto&tl=" +
-                             Uri.EscapeDataString(target) + "&q=" + Uri.EscapeDataString(text);
+                string url = DictionaryEndpoint + "?client=dict-chrome-ex&ie=UTF-8&oe=UTF-8&sl=" +
+                             Uri.EscapeDataString(source) + "&tl=" + Uri.EscapeDataString(target) +
+                             "&q=" + Uri.EscapeDataString(text);
                 json = await _http.GetStringAsync(url).ConfigureAwait(false);
             }
             return ParseDictionary(json);
@@ -2518,6 +2517,7 @@ namespace Qalam
 
         public event Action<string> TargetChanged;
         public event Action<string> CharactersRequested;
+        public event Action<TranslationResult> ViewInAppRequested;
 
         private readonly Border _root;
         private readonly TextBlock _source;
@@ -2537,6 +2537,7 @@ namespace Qalam
         private readonly TextBlock _tashkeel;
         private readonly TextBlock _transliteration;
         private readonly Button _copyButton;
+        private readonly Button _viewInAppButton;
         private readonly Button _charactersButton;
         private readonly Border _synonymsPanel;
         private readonly TextBlock _synonyms;
@@ -2548,6 +2549,7 @@ namespace Qalam
         private readonly TextBlock _examplesCredit;
         private readonly ScrollViewer _bodyScroll;
 
+        private TranslationResult _currentResult;
         private string _translationText = "";
         private string _tashkeelText = "";
         private string _tashkeelSpeech = "";
@@ -2829,6 +2831,11 @@ namespace Qalam
             footerButtons.VerticalAlignment = VerticalAlignment.Center;
 
 
+            _viewInAppButton = Ui.SmallOutlineButton("View in App", delegate { OpenInApp(); });
+            _viewInAppButton.Margin = new Thickness(0, 0, 8, 0);
+            _viewInAppButton.IsEnabled = false;
+            footerButtons.Children.Add(_viewInAppButton);
+
             _copyButton = Ui.PrimaryButton("Copy translation", delegate { Copy(_translationText, "Translation"); });
             footerButtons.Children.Add(_copyButton);
 
@@ -2979,6 +2986,8 @@ namespace Qalam
             _translationText = "";
             _speechLang = "";
             _copyButton.IsEnabled = false;
+            _currentResult = null;
+            if (_viewInAppButton != null) _viewInAppButton.IsEnabled = false;
             _sourceText = source ?? "";
             _sourceSpeechLang = SpeechLanguage.Resolve(_sourceText, null);
             if (_sourceListenButton != null) _sourceListenButton.IsEnabled = !string.IsNullOrEmpty(_sourceText);
@@ -3017,6 +3026,10 @@ namespace Qalam
 
             _translation.FontSize = 21;
             _copyButton.IsEnabled = true;
+            _currentResult = result;
+            if (_viewInAppButton != null)
+                _viewInAppButton.IsEnabled = result != null && !result.TashkeelOnly &&
+                    string.IsNullOrEmpty(result.Error) && !string.IsNullOrEmpty(result.Translation);
             _speechLang = result.TashkeelOnly
                 ? SpeechLanguage.Resolve(result.SourceText, result.Detected)
                 : SpeechLanguage.Resolve(result.Translation, result.Target);
@@ -3308,6 +3321,17 @@ namespace Qalam
             }
         }
 
+        private void OpenInApp()
+        {
+            TranslationResult result = _currentResult;
+            Action<TranslationResult> handler = ViewInAppRequested;
+            if (result == null || handler == null || result.TashkeelOnly ||
+                !string.IsNullOrEmpty(result.Error) || string.IsNullOrEmpty(result.Translation))
+                return;
+            Hide();
+            handler(result);
+        }
+
         private void Copy(string text, string what)
         {
             if (string.IsNullOrEmpty(text)) return;
@@ -3454,6 +3478,7 @@ namespace Qalam
             SpeechService.Vocalizer = _tashkeel.Diacritize;
             _popup = new PopupWindow();
             _popup.TargetChanged += OnPopupTargetChanged;
+            _popup.ViewInAppRequested += OnPopupViewInApp;
             _popup.CharactersRequested += delegate(string text)
             {
                 CharacterWindow.ShowFor(text, delegate
@@ -3543,6 +3568,14 @@ namespace Qalam
                     TranslateDocument);
             }
             _main.ShowFromTray();
+        }
+
+        private void OnPopupViewInApp(TranslationResult result)
+        {
+            if (result == null) return;
+            _last = result;
+            ShowMainWindow();
+            if (_main != null) _main.ShowFromPopup(result);
         }
 
         private void OnDoubleCopy(uint sequence)
@@ -4808,6 +4841,33 @@ namespace Qalam
                 catch (Exception ex)
                 {
                     log.AppendLine("natural_FAIL=" + ex.Message);
+                }
+
+                // Regression for the Arabic sentence that exposed the provider
+                // race: "صالح" is an adjective here, not a man named Saleh, and
+                // "بر الوالدين" is honoring parents, not knowledge from them.
+                try
+                {
+                    string arabicProse = "رجل صالح يصلي في المسجد ذو الأخلاق طيب، يحب طلب العلم الشرعي بر الوالدين، باتباع منهج السلف الصالح";
+                    if (Colloquial.LooksColloquial(arabicProse, "ar"))
+                    {
+                        exitCode = 1;
+                        log.AppendLine("arabic_quality_colloquial=true");
+                    }
+                    TranslationService arabicQuality = new TranslationService();
+                    TranslationOutcome arabicOutcome = arabicQuality.TranslateAsync(arabicProse, "en")
+                        .GetAwaiter().GetResult();
+                    log.AppendLine("arabic_quality=" + arabicOutcome.Text);
+                    if (arabicOutcome.Engine == "local" ||
+                        arabicOutcome.Text.IndexOf("Saleh", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        arabicOutcome.Text.IndexOf("from his parents", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        arabicOutcome.Text.IndexOf("parents", StringComparison.OrdinalIgnoreCase) < 0)
+                        exitCode = 1;
+                }
+                catch (Exception ex)
+                {
+                    exitCode = 1;
+                    log.AppendLine("arabic_quality_FAIL=" + ex.Message);
                 }
 
                 // Exercise the open-data grammar/conjugation lookup. The source

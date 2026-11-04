@@ -52,6 +52,10 @@ The Transliteration line now follows the pronunciation register you chose, so a 
 
 Unvocalized input is read by context: a bare ان with no shadda is the conditional In, not anna, so ان شاء الله بعد بخلص من الشغل اليوم becomes In Shaa' Allaah ba'd bakhalliṣ min ash-Shughl il-Yawm. Formulae such as In Shaa' Allaah, Bismillaah, Al-Ḥamdu lillaah, As-Salaamu 'alaykum, Maa Shaa' Allaah, Subḥaan Allaah, Allaahu Akbar and Laa ilaaha illaa Allaah keep their Fuṣḥā shape in every register; a preposition keeps the plain article after it (min ash-shughul) while the genitive i still carries onto a following article (ash-Shughl il-Yawm).
 
+## 1.0.32 — 2026-11-04
+
+The compact pop-up now has a View in App action that opens the completed source and translation in the main window without re-running the translation or adding a duplicate history entry. Formal Arabic that happens to contain a dialect word such as طيب is no longer sent to the local slang model, and the normal translation endpoint is now the primary online path; the reported passage now keeps the righteous man and honoring his parents instead of Saleh and from his parents.
+
 ## 1.0.31 — 2026-11-04
 
 PDF translations now preserve exact copy text for Arabic, Hebrew, Persian, Urdu, Hindi, and Thai. Every inserted translation carries PDF ActualText, so readers that support marked content copy the translation instead of the font's shared glyphs or contextual forms. The 13-block, 15-language formatting suite now runs against the built executable before any release draft is created and refuses the release on a layout, font, report, or copy-text regression; the fixture and runner ship with the test suite.
