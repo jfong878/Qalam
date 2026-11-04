@@ -52,7 +52,8 @@ namespace Qalam
         }
 
         public async Task<DocumentTranslationReport> TranslateAsync(string input, string output, string target,
-            string source, IProgress<DocumentProgress> progress, CancellationToken token)
+            string source, IProgress<DocumentProgress> progress, CancellationToken token,
+            Func<IList<DocumentSegment>, bool> review = null)
         {
             input = Path.GetFullPath(input);
             output = Path.GetFullPath(output);
@@ -77,7 +78,7 @@ namespace Qalam
                     try
                     {
                         DocxTranslationResult docx = await new DocxDocumentTranslator(_translator)
-                            .TranslateAsync(input, temp, target, progress, token).ConfigureAwait(false);
+                            .TranslateAsync(input, temp, target, progress, token, review).ConfigureAwait(false);
                         if (File.Exists(output)) File.Replace(temp, output, null);
                         else File.Move(temp, output);
                         report.Translated = docx.Translated;
@@ -91,7 +92,7 @@ namespace Qalam
                 else
                 {
                     PdfTranslationResult result = await new PdfDocumentTranslator(_config, _translator)
-                        .TranslateAsync(input, output, target, progress, token).ConfigureAwait(false);
+                        .TranslateAsync(input, output, target, progress, token, review).ConfigureAwait(false);
                     report.Translated = result.Translated;
                     report.Units = result.Units;
                     report.Pages = result.Pages;

@@ -20,8 +20,9 @@ PASS  ja     slang=0.74 flat=0.00  やばい、まじでやだ。
 PASS  hi     slang=0.57 flat=0.00  यार, ये तो मस्त है!
 PASS  uk     slang=0.77 flat=0.00  Блін, чувак, це круто!
 PASS  ro     slang=0.77 flat=0.00  Fir-ar, frate, e mișto!
-PASS  neutral en     value=0.05
-PASS  query echo     value=0.04
+PASS  neutral en     value=0.00
+PASS  cjk counts     zh=3 ja=3 mixed=4 latin=2 ko=2
+PASS  query echo     value=0.00
 PASS  formal fr      value=0.00
 
 pack probe
@@ -34,11 +35,11 @@ pack probe
    r=0.62  Vale, volveré en una semana.  ||  Okay, I'll be back in a week.
 
 -- es->en  tio  (5 hits)
-   r=0.63  ...tía Louise y tío Arthur Wendell.  ||  Aunt Louise and also Arthur Wendell.
-   r=0.60  Bueno, adiós, tío Ben.  ||  Well, goodbye, Uncle Ben.
-   r=0.60  Su tía Evelyn y su tío Henry.  ||  Her aunt Evelyn and uncle Henry.
-   r=0.56  Sí, tio Sascha. Tía Iduna se fue a París. - ¿De dónde...  ||  Aunt Iduna is traveling to Paris.
-   r=0.55  Sí, he venido por aquí porque vi a tío Dick y tía May...  ||  I came in this way because I saw Uncle Dick and Aunti...
+   r=0.59  Bueno, adiós, tío Ben.  ||  Well, goodbye, Uncle Ben.
+   r=0.50  Lo construyó el tío del gran duque, el conde Maximill...  ||  Yes, it was built by the Grand Duke's uncle, Count Ma...
+   r=0.47  Chuck, eres un tío estupendo... y sabes que soy tu co...  ||  You know, Chuck, you're a great guy, and you knows I'...
+   r=0.44  ¡Te la pagó tu tío!  ||  With money you got from your uncle.
+   r=0.43  ¡Tío Peter, cuidado con el baúl!  ||  Uncle Peter, look out for that trunk!
 
 -- es->en  joder  (5 hits)
    r=0.69  ¡Joder, ahí está Magda!  ||  Damn, here comes Magda!
@@ -48,24 +49,24 @@ pack probe
    r=0.40  Joder, tres, tengo tres cartas.  ||  Wow, 3, I have three.
 
 -- es->en  que pasa  (5 hits)
-   r=0.69  Esa tía es dinamita... cada día que pasa aquí le agre...  ||  Yeah, that dame's dynamite. Every day she's here puts...
-   r=0.56  Ahora dime. ¿Qué pasa?  ||  Aw, come on, what's it all about?
+   r=0.62  Esa tía es dinamita... cada día que pasa aquí le agre...  ||  Yeah, that dame's dynamite. Every day she's here puts...
+   r=0.55  Ahora dime. ¿Qué pasa?  ||  Aw, come on, what's it all about?
    r=0.37  ¡Vamos, Morrell! ¿Qué pasa con vosotros?  ||  Hey fellas, what's the matter with ya, ya deaf?
-   r=0.35  ¿Qué pasa, qué pasa?  ||  What's up what's Up?
+   r=0.34  ¿Qué pasa, qué pasa?  ||  What's up what's Up?
    r=0.34  ¿Y qué pasa con nuestro golpe al banco?  ||  What about the big bank job?
 
 -- en->es  yeah  (5 hits)
-   r=0.88  Yeah, yeah, sort of a, um...  ||  Sí, sí, una especie de...
+   r=0.87  Yeah, yeah, sort of a, um...  ||  Sí, sí, una especie de...
    r=0.70  Hannes Kröger, the singing sailor, yeah, shit... what...  ||  Hannes Kröger, el marino cantante, sí, sí, mierda... ...
    r=0.68  Yeah, well, uh... thanks.  ||  Sí, bueno, eh... Gracias.
    r=0.66  Now, I give it to you. Yeah?  ||  Se lo doy, ¿vale?
    r=0.65  Why, yeah, that's right, doc.  ||  Vaya, sí, tienes razón, viejo.
 
 -- en->es  whatever  (5 hits)
-   r=0.63  WHATEVER'S THE MATTER WITH YOUR AUNT?  ||  ¡Charley! ¿Qué le ocurre a su tía?
    r=0.60  We buy cocaine with it, morphine, heroin, opium, what...  ||  Compramos cocaína con ello, morfina, heroína, opio, c...
    r=0.55  Whatever you think of that car, she'd fetch a 100 pou...  ||  Piensa lo que quieras del coche, pero ganará 100 libr...
    r=0.38  You know... but whatever I do I... I still respect lo...  ||  Ya sabe, y en la vida privada también, también soy as...
+   r=0.37  WHATEVER'S THE MATTER WITH YOUR AUNT?  ||  ¡Charley! ¿Qué le ocurre a su tía?
    r=0.30  Whatever you try to make me say, I can only tell the ...  ||  Intente lo que intente que diga, sólo puedo decir la ...
 
 -- ar->en  يعني  (5 hits)
@@ -76,16 +77,16 @@ pack probe
    r=0.34  -هل هذا سيء ؟ -هذا يعني , أنها مرتفعة قليلاً  ||  It's definitely a slight temperature.
 
 -- ar->en  شو  (4 hits)
-   r=0.30  -نعم، "شو، شو" لكِ أنتِ.  ||  Yes, "shoo, shoo" to you.
-   r=0.05  ربما يجب أن تكتب لسرجنت ريموند شو  ||  You want to write to Sergeant Shaw. - I tell you, not...
+   r=0.29  -نعم، "شو، شو" لكِ أنتِ.  ||  Yes, "shoo, shoo" to you.
+   r=0.00  ربما يجب أن تكتب لسرجنت ريموند شو  ||  You want to write to Sergeant Shaw. - I tell you, not...
    r=0.00  ‫قال والد "شو" فيما بعد إنه كان فخوراً ‫بدفنه بتلك ال...  ||  WITH HIS SOLDIERS. SHAW'S FATHER LATER SAID HE WAS PR...
-   r=0.05  متل شو؟  ||  LIKE WHAT?
+   r=0.00  متل شو؟  ||  LIKE WHAT?
 
 -- en->ar  dude  (5 hits)
-   r=0.60  Hey, Mr. dude.. Wait..  ||  -انتظر يا سيدي
+   r=0.59  Hey, Mr. dude.. Wait..  ||  -انتظر يا سيدي
    r=0.40  Dude am I ugly?  ||  يا رجل هل أنا قبيح؟
-   r=0.35  Is this the dude?  ||  هل هذا هو المتأنق؟
-   r=0.35  Dude, you been seeing things again.  ||  أنك تتخيل أشياء ثانيه
+   r=0.34  Is this the dude?  ||  هل هذا هو المتأنق؟
+   r=0.34  Dude, you been seeing things again.  ||  أنك تتخيل أشياء ثانيه
    r=0.30  Dude hires some creep named Raoul to hit Johnny.  ||  الرجلُ استأجر أحد المتعقبين ويدعى "راؤول" لقتل "جوني"
 
 boosted 41/44 pack hits

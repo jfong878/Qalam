@@ -24,17 +24,20 @@ the same way. Rank is by usable pairs, not by raw size.
 | 12 | Hebrew | 46,736,828 | 94.8% | 44,288,800 | 94,762 | 1,895,242 | fills a 2M pack |
 | 13 | Vietnamese | 30,541,115 | 96.7% | 29,544,519 | 96,736 | 1,934,737 | fills a 2M pack |
 | 14 | Korean | 26,297,116 | 93.7% | 24,633,797 | 93,674 | 1,873,498 | fills a 2M pack |
-| 15 | Chinese (Simplified) | 19,629,206 | 82.6% | 16,211,590 | 82,589 | 1,651,782 | fills a 2M pack |
-| 16 | Chinese (Traditional) | 16,290,630 | 81.0% | 13,200,383 | 81,030 | 1,620,610 | fills a 2M pack |
+| 15 | Chinese (Simplified) | 19,629,206 | 96.1% | 18,856,886 | 96,065 | 1,921,309 | fills a 2M pack |
+| 16 | Chinese (Traditional) | 16,290,630 | 95.4% | 15,547,563 | 95,438 | 1,908,773 | fills a 2M pack |
 | 17 | Ukrainian | 8,735,137 | 93.6% | 8,179,487 | 93,638 | 1,872,778 | fills a 2M pack |
 | 18 | Hindi | 2,529,437 | 87.0% | 2,199,853 | 86,970 | 1,739,401 | fills a 2M pack |
-| 19 | Japanese | 1,908,317 | 83.2% | 1,587,172 | 83,171 | 1,587,172 | fills a 100k pack |
+| 19 | Japanese | 1,908,317 | 92.5% | 1,764,880 | 92,483 | 1,764,880 | fills a 100k pack |
 
 ## What the numbers mean
 
 - Everything above is *general* dialogue. It contains slang because
-  subtitles contain slang, not because anyone tagged it. The app
-  currently has no way to rank a colloquial line above a flat one.
+  subtitles contain slang, not because anyone tagged it. Register
+  ranking is therefore inferred locally (src/Register.cs): a per-language
+  colloquial/formal lexicon scores each candidate line before the
+  corpus order is applied, so a casual line outranks a flat one that
+  matches equally well.
 - A probe-based slang density was measured and then discarded: with
   hand-written profanity lists it is dominated by artefacts (Arabic
   clitics and substrings inflate it by an order of magnitude, and
@@ -45,6 +48,16 @@ the same way. Rank is by usable pairs, not by raw size.
 - The sample is a prefix of the stream, so it reflects the first
   documents in the file. Counts good to roughly a percentage point.
 - Nearly every language here can fill a 2M pack. Dialogue supply is
-  not what separates them; shipping size, alignment quality, and the
-  absence of any register ranking are what decide whether the
-  examples feel like Reverso's.
+  not what separates them; shipping size and alignment quality decide
+  how much usable dialogue a pack holds.
+
+## Word counting for Chinese and Japanese
+
+The acceptance filter counted words by splitting on spaces, so an
+unspaced sentence counted as one word and failed the two-word minimum.
+Characters in Han and kana scripts are word units now. Both figures are
+in the table's acceptance column: `qalam` is the old whitespace count,
+`aware` is the shipped rule.
+- Chinese (Simplified): 43.5% under the whitespace count, 96.1% after.
+- Chinese (Traditional): 42.0% under the whitespace count, 95.4% after.
+- Japanese: 46.5% under the whitespace count, 92.5% after.

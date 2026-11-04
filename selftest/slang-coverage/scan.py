@@ -5,9 +5,10 @@ For each language it reads the OPUS API pair statistics, then range-downloads a
 bounded prefix of the pair XML, so the sample is a real slice of the alignment
 rather than a guess. Two filters are applied:
 
-  qalam  - the exact acceptance filter in src/Concordance.cs (Good())
-  aware  - the same, but CJK word counts are character based so Japanese and
-           Chinese are not rejected for lacking spaces
+  qalam  - the whitespace word count the app used to apply, kept as the
+           "before" figure for Chinese and Japanese
+  aware  - the acceptance filter in src/Concordance.cs after CJK characters
+           became word units, which is what the shipped build now does
 
 A line counts as colloquial when it contains one of a small set of high
 confidence profanity/slang probes for that language. That is a lower bound on
@@ -71,14 +72,33 @@ def unescape(text):
     return " ".join(text.split())
 
 
+CJK_RANGES = ((0x3040, 0x30FF), (0x3400, 0x4DBF), (0x4E00, 0x9FFF))
+
+
+def cjk_char(c):
+    code = ord(c)
+    return any(low <= code <= high for low, high in CJK_RANGES)
+
+
 def words(text, lang):
-    n = len(text.split())
-    if cjk(lang):
-        # CJK subtitles usually carry no spaces; count characters instead so the
-        # shared filter does not read a full sentence as one word.
-        chars = sum(1 for c in text if c.isalnum())
-        return max(n, chars // 3)
-    return n
+    """Mirror of ConcordanceText.WordCountClean.
+
+    Chinese and Japanese write without spaces, so a sentence used to arrive as
+    one word and fail the two-word minimum. Each of their characters is a word
+    unit now, plus one for any Latin run beside it.
+    """
+    if not cjk(lang):
+        return len(text.split())
+    total = 0
+    for chunk in text.split():
+        han = sum(1 for c in chunk if cjk_char(c))
+        if not han:
+            total += 1
+            continue
+        total += han
+        if any(c.isalnum() and not cjk_char(c) for c in chunk):
+            total += 1
+    return total
 
 
 def good(source, target, lang, aware, max_chars=220, min_words=2, max_words=24):

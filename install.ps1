@@ -91,6 +91,7 @@ Copy-Item -LiteralPath (Join-Path $root 'tashkeel\tashkeel_server.py') -Destinat
 Copy-Item -LiteralPath (Join-Path $root 'tashkeel\requirements.txt') -Destination $tashkeelDest -Force
 Copy-Item -LiteralPath (Join-Path $root 'documents\pdf_translate.py') -Destination $documentsDest -Force
 Copy-Item -LiteralPath (Join-Path $root 'documents\requirements.txt') -Destination $documentsDest -Force
+Copy-Item -LiteralPath (Join-Path $root 'documents\ocr_windows.ps1') -Destination $documentsDest -Force
 Copy-Item -Path (Join-Path $root 'mobile\*') -Destination $mobileDest -Force
 # Keep the installer beside the installed app so the browser's Windows
 # download endpoint can build a fresh package without the source checkout.

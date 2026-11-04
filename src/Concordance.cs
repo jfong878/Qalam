@@ -139,7 +139,50 @@ namespace Qalam
         public static int WordCountClean(string clean)
         {
             if (string.IsNullOrEmpty(clean)) return 0;
-            return clean.Split(WordSeparators, StringSplitOptions.RemoveEmptyEntries).Length;
+            string[] chunks = clean.Split(WordSeparators, StringSplitOptions.RemoveEmptyEntries);
+            int count = 0;
+            foreach (string chunk in chunks)
+            {
+                int cjk = 0;
+                bool other = false;
+                foreach (char c in chunk)
+                {
+                    if (IsCjkLetter(c)) cjk++;
+                    else if (char.IsLetterOrDigit(c)) other = true;
+                }
+                // Chinese and Japanese write without spaces, so a whole sentence
+                // arrived here as one "word" and failed the two-word minimum.
+                // Their characters are the word unit; a Latin run beside them is
+                // one more word.
+                if (cjk == 0) count++;
+                else count += cjk + (other ? 1 : 0);
+            }
+            return count;
+        }
+
+        // Han, kana, with Hangul syllables left out: Korean is written with
+        // spaces, so counting its syllables would multiply every word by three.
+        public static bool IsCjkLetter(char c)
+        {
+            return (c >= '\u3040' && c <= '\u30FF') ||
+                   (c >= '\u3400' && c <= '\u4DBF') ||
+                   (c >= '\u4E00' && c <= '\u9FFF');
+        }
+
+        public static bool HasCjk(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return false;
+            foreach (char c in value)
+                if (IsCjkLetter(c)) return true;
+            return false;
+        }
+
+        // A Chinese or Japanese character is a word unit here, and those scripts
+        // run roughly two and a half characters per word, so a limit tuned on
+        // words has to widen for them or ordinary lines are rejected.
+        public static int WordLimit(int limit, string value)
+        {
+            return HasCjk(value) ? limit * 5 / 2 : limit;
         }
 
         public static bool HasLetter(string value)
@@ -612,8 +655,13 @@ namespace Qalam
                 target.IndexOf("00:", StringComparison.Ordinal) >= 0) return false;
             int sourceWords = ConcordanceText.WordCountClean(source);
             int targetWords = ConcordanceText.WordCountClean(target);
-            if (sourceWords == 0 || sourceWords > 40) return false;
-            if (targetWords == 0 || targetWords > 48) return false;
+            // The ceiling is a junk filter tuned on word counts. A CJK line
+            // yields one unit per character, so the same dialogue needs a
+            // wider ceiling or ordinary Chinese and Japanese lines are cut.
+            int sourceLimit = ConcordanceText.WordLimit(40, source);
+            int targetLimit = ConcordanceText.WordLimit(48, target);
+            if (sourceWords == 0 || sourceWords > sourceLimit) return false;
+            if (targetWords == 0 || targetWords > targetLimit) return false;
             return true;
         }
 
@@ -799,8 +847,10 @@ namespace Qalam
 
                 int sourceWords = ConcordanceText.WordCount(source);
                 int targetWords = ConcordanceText.WordCount(target);
-                if (sourceWords < options.MinWords || sourceWords > options.MaxWords) return false;
-                if (targetWords < 2 || targetWords > options.MaxWords + 8) return false;
+                int sourceMax = ConcordanceText.WordLimit(options.MaxWords, source);
+                int targetMax = ConcordanceText.WordLimit(options.MaxWords + 8, target);
+                if (sourceWords < options.MinWords || sourceWords > sourceMax) return false;
+                if (targetWords < 2 || targetWords > targetMax) return false;
 
                 if (source.IndexOf("http://", StringComparison.OrdinalIgnoreCase) >= 0) return false;
                 if (source.IndexOf("https://", StringComparison.OrdinalIgnoreCase) >= 0) return false;

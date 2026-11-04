@@ -300,8 +300,9 @@ while ((Get-Date) -lt $deadline) {
 if ($null -eq $publicManifest -or [string]$publicManifest.version -ne $Version) {
     throw ('The release is published, but the public feed did not reach ' + $Version + ' within 90 seconds.')
 }
-if ([string]$publicManifest.url -ne (Split-Path -Leaf $setupPath)) {
-    throw 'The public feed points to the wrong installer filename.'
+$feedLeaf = Split-Path -Leaf ([string]$publicManifest.url)
+if ($feedLeaf -ne (Split-Path -Leaf $setupPath)) {
+    throw ('The public feed points to the wrong installer filename: ' + $feedLeaf + '.')
 }
 if ([string]$publicManifest.sha256 -ne $verified.Sha256) {
     throw 'The public feed SHA-256 does not match the built installer.'

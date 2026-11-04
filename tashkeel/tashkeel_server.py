@@ -671,6 +671,25 @@ def transliterate(text):
         genitive = governs
         index += 1
     result = " ".join(out).replace("  ", " ").strip()
+    # Assimilate fee + definite article (Aboo Ṣāliḥ scheme)
+    import re
+    # Moon letter case: fee al- -> feel-
+    result = re.sub(r'(^|\s)([Ff])ee al-', lambda m: m.group(1) + m.group(2) + 'eel-', result)
+    # Sun letter cases: fee ash- -> feesh-, fee as- -> fees-, etc.
+    result = re.sub(r'(^|\s)([Ff])ee a(sh)-', lambda m: m.group(1) + m.group(2) + 'ee' + 'sh' + '-', result)
+    result = re.sub(r'(^|\s)([Ff])ee a(th)-', lambda m: m.group(1) + m.group(2) + 'ee' + 'th' + '-', result)
+    result = re.sub(r'(^|\s)([Ff])ee a(dh)-', lambda m: m.group(1) + m.group(2) + 'ee' + 'dh' + '-', result)
+    result = re.sub(r'(^|\s)([Ff])ee a(dH)-', lambda m: m.group(1) + m.group(2) + 'ee' + 'dH' + '-', result)
+    result = re.sub(r'(^|\s)([Ff])ee a(ṣ)-', lambda m: m.group(1) + m.group(2) + 'ee' + 'ṣ' + '-', result)
+    result = re.sub(r'(^|\s)([Ff])ee a(ḍ)-', lambda m: m.group(1) + m.group(2) + 'ee' + 'ḍ' + '-', result)
+    result = re.sub(r'(^|\s)([Ff])ee a(ṭ)-', lambda m: m.group(1) + m.group(2) + 'ee' + 'ṭ' + '-', result)
+    result = re.sub(r'(^|\s)([Ff])ee a(t)-', lambda m: m.group(1) + m.group(2) + 'ee' + 't' + '-', result)
+    result = re.sub(r'(^|\s)([Ff])ee a(d)-', lambda m: m.group(1) + m.group(2) + 'ee' + 'd' + '-', result)
+    result = re.sub(r'(^|\s)([Ff])ee a(r)-', lambda m: m.group(1) + m.group(2) + 'ee' + 'r' + '-', result)
+    result = re.sub(r'(^|\s)([Ff])ee a(z)-', lambda m: m.group(1) + m.group(2) + 'ee' + 'z' + '-', result)
+    result = re.sub(r'(^|\s)([Ff])ee a(s)-', lambda m: m.group(1) + m.group(2) + 'ee' + 's' + '-', result)
+    result = re.sub(r'(^|\s)([Ff])ee a(n)-', lambda m: m.group(1) + m.group(2) + 'ee' + 'n' + '-', result)
+    result = re.sub(r'(^|\s)([Ff])ee a(l)-', lambda m: m.group(1) + m.group(2) + 'eel-', result)
     if result:
         result = result[0].upper() + result[1:]
     return result

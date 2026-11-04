@@ -52,6 +52,50 @@ The Transliteration line now follows the pronunciation register you chose, so a 
 
 Unvocalized input is read by context: a bare ان with no shadda is the conditional In, not anna, so ان شاء الله بعد بخلص من الشغل اليوم becomes In Shaa' Allaah ba'd bakhalliṣ min ash-Shughl il-Yawm. Formulae such as In Shaa' Allaah, Bismillaah, Al-Ḥamdu lillaah, As-Salaamu 'alaykum, Maa Shaa' Allaah, Subḥaan Allaah, Allaahu Akbar and Laa ilaaha illaa Allaah keep their Fuṣḥā shape in every register; a preposition keeps the plain article after it (min ash-shughul) while the genitive i still carries onto a following article (ash-Shughl il-Yawm).
 
+## 1.0.30 — 2026-11-04
+
+Arabic PDFs now copy as standard Arabic instead of PUA placeholders. Qalam rebuilds each translated font's ToUnicode map from its actual HarfBuzz glyph clusters, so ligatures copy as their real letters and the separate dot glyphs are dropped on read-back. The page rendering and the source font stay unchanged, and English-to-Arabic followed by Arabic-to-English now round-trips with clean text. The PDF helper now installs `uharfbuzz` and `fonttools` alongside PyMuPDF for this repair.
+
+## 1.0.29 — 2026-11-04
+
+The translated sentence is now a reading surface: click any word and the voice starts from that word, continuing to the end of the passage, while the Listen button switches to Pause. The Slow toggle now changes speed immediately instead of letting the buffered normal-speed audio finish first. Works in the main window and the compact pop-up.
+
+## 1.0.28 — 2026-11-04
+
+Document translation now pauses for review before it writes a file. Every translated passage appears beside its source so you can correct the wording, and clearing a passage leaves it in the original language. Qalam writes the PDF or DOCX only when you choose Save; Cancel leaves the original untouched. The progress window steps aside while you edit.
+
+## 1.0.27 — 2026-11-04
+
+Scanned PDFs now translate. Qalam reads pages that have no text layer with the Windows OCR engine, picks the installed OCR language that reads the page best, and writes the translation into the same layout. The scanned glyphs are erased in place and the translation sits on the cleaned page, so a scan no longer shows two languages stacked on top of each other. Digital PDFs keep the 1.0.26 formatting work, and the PDF helper now receives the same measured geometry for both reading and writing. Add more OCR languages in Windows Settings > Time & language > Language & region.
+
+## 1.0.26 — 2026-11-04
+
+PDF translation now preserves bullet lines, inline bold and italic labels, the source font family, and readable type sizes. Each block gets room to grow into nearby whitespace before text is shrunk, so translated resumes keep their hierarchy instead of collapsing into tiny paragraphs. DOCX translation is unchanged; a PDF still reflows long translations within its original blocks because the format has no text-flow model.
+
+## 1.0.25 — 2026-11-04
+
+Audio now starts after the first 180-character chunk instead of waiting for the whole passage. Chunks are cached in %LOCALAPPDATA%\Qalam\audio-cache, so replaying the same text or resuming after pause/slow opens instantly, and the Listen button shows Loading while the first chunk is fetched. Remaining chunks download one at a time in the background; parallel requests are throttled by the speech service.
+
+## 1.0.24 — 2026-11-04
+
+Every Listen button now cycles through play, pause and slow (0.65×) playback. The label shows the next action — Listen, Pause, Slow or Play — and paused audio resumes from its position instead of restarting.
+
+## 1.0.23 — 2026-11-04
+
+The main window keeps a 10,000-character ceiling, twice Reverso Premium's 5,000-character limit. Installs still carrying the popup-era 600 default move to 10,000 on load, and a selection over 600 characters still opens in the main window instead of the popup.
+
+## 1.0.22 — 2026-11-04
+
+Detection corrections after testing the resolver against real sentences: German and Portuguese no longer read as Spanish, Italian is recognized instead of falling back to English, kana-only Japanese is spoken as Japanese, and a French sentence tagged Spanish (or the reverse) is re-read locally instead of trusting the wrong tag. Each language now carries one Listen button, placed beside the text it speaks: the popup keeps the source and translation buttons and drops the footer duplicate, while the main window keeps the original-text button and drops the one in the action row.
+
+## 1.0.21 — 2026-11-04
+
+Audio language detection now follows the text: script evidence decides first, the detected or target tag is normalized against the catalog, and Latin fallbacks distinguish French from Spanish by function words and accents, with lists for Catalan, Galician, the Nordic languages, Czech, Slovak, Croatian, Serbian, Bosnian, Slovenian, Estonian, Lithuanian, Latvian, Icelandic, Afrikaans, Swahili, Filipino, Malay, Esperanto and Latin. A French selection now speaks French instead of Spanish in the popup, the main window, and the input Listen button.
+
+## 1.0.20 — 2026-11-04
+
+Listen buttons now sit beside the source and the translation in the Ctrl + C + C popup and in the main window, and the main window adds one for the input box. A selection longer than 600 characters opens in the main window instead of the popup, and the main window accepts up to 10,000 characters. Speech requests now carry the parameters Google requires, so audio plays again instead of reporting "Audio unavailable."
+
 ## 1.0.17 — 2026-11-03
 
 Fuṣḥā repairs only the words Mishkal could not read and leaves every word carrying a short vowel exactly as it stands, so btabda' no longer collapses to Btbd' and وبتخلص reads wabatakhalliṣ.

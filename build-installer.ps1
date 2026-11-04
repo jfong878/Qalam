@@ -35,6 +35,7 @@ Copy-Item -LiteralPath (Join-Path $root 'tashkeel\tashkeel_server.py') -Destinat
 Copy-Item -LiteralPath (Join-Path $root 'tashkeel\requirements.txt') -Destination (Join-Path $stage 'tashkeel\requirements.txt') -Force
 Copy-Item -LiteralPath (Join-Path $root 'documents\pdf_translate.py') -Destination (Join-Path $stage 'documents\pdf_translate.py') -Force
 Copy-Item -LiteralPath (Join-Path $root 'documents\requirements.txt') -Destination (Join-Path $stage 'documents\requirements.txt') -Force
+Copy-Item -LiteralPath (Join-Path $root 'documents\ocr_windows.ps1') -Destination (Join-Path $stage 'documents\ocr_windows.ps1') -Force
 Copy-Item -Path (Join-Path $root 'mobile\*') -Destination (Join-Path $stage 'mobile') -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $root 'install.ps1') -Destination (Join-Path $stage 'install.ps1') -Force
 Copy-Item -LiteralPath (Join-Path $root 'uninstall.ps1') -Destination (Join-Path $stage 'uninstall.ps1') -Force

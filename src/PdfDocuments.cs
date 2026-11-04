@@ -112,7 +112,8 @@ namespace Qalam
         }
 
         public async Task<PdfTranslationResult> TranslateAsync(string input, string output, string target,
-            IProgress<DocumentProgress> progress, CancellationToken token)
+            IProgress<DocumentProgress> progress, CancellationToken token,
+            Func<IList<DocumentSegment>, bool> review = null)
         {
             if (!File.Exists(Paths.PdfScriptPath))
                 throw new DocumentTranslationException("The PDF helper is missing. Reinstall Qalam or restore documents/pdf_translate.py.");
@@ -126,7 +127,7 @@ namespace Qalam
                     File.ReadAllText(blocksPath, Encoding.UTF8));
                 if (extract == null || extract.Blocks == null || extract.Blocks.Count == 0)
                     throw new DocumentTranslationException(
-                        "This PDF has no selectable text. Scanned PDFs need OCR, which Qalam does not bundle.");
+                        "This PDF has no selectable text and OCR could not read it. Add a Windows OCR language pack (Settings > Time & language > Language & region) and try again.");
 
                 PdfTranslationResult result = new PdfTranslationResult();
                 result.Pages = extract.Pages;
@@ -182,6 +183,44 @@ namespace Qalam
                 if (translatedBlocks.Count == 0)
                     throw new DocumentTranslationException("No PDF text blocks could be translated. The original file was not changed.");
 
+                // Nothing is written until the review callback returns. Edits
+                // replace the translation for that block id in place.
+                if (review != null)
+                {
+                    Dictionary<string, PdfBlockInfo> byId = new Dictionary<string, PdfBlockInfo>(StringComparer.Ordinal);
+                    foreach (PdfBlockInfo block in extract.Blocks) byId[block.Id] = block;
+
+                    List<DocumentSegment> segments = new List<DocumentSegment>();
+                    for (int i = 0; i < translatedBlocks.Count; i++)
+                    {
+                        PdfTranslationItem item = translatedBlocks[i];
+                        PdfBlockInfo block;
+                        byId.TryGetValue(item.Id, out block);
+                        DocumentSegment segment = new DocumentSegment();
+                        segment.Id = item.Id;
+                        segment.Label = block == null ? "Text block " + (i + 1) : "Page " + (block.Page + 1);
+                        segment.Source = block == null ? "" : block.Text;
+                        segment.Translation = item.Translation;
+                        segments.Add(segment);
+                    }
+
+                    if (!review(segments)) throw new OperationCanceledException(token);
+
+                    for (int i = 0; i < translatedBlocks.Count; i++)
+                    {
+                        string edited = segments[i].Translation == null ? "" : segments[i].Translation.Trim();
+                        translatedBlocks[i].Translation = edited;
+                    }
+                    translatedBlocks.RemoveAll(delegate(PdfTranslationItem item)
+                    {
+                        return string.IsNullOrWhiteSpace(item.Translation);
+                    });
+                    if (translatedBlocks.Count == 0)
+                        throw new DocumentTranslationException("Every translation was cleared in review. The original file was not changed.");
+                    result.Translated = translatedBlocks.Count;
+                    result.Skipped = Math.Max(0, result.Units - result.Translated);
+                }
+
                 PdfTranslationPayload payload = new PdfTranslationPayload();
                 payload.Target = target;
                 payload.Blocks = translatedBlocks;
@@ -195,7 +234,9 @@ namespace Qalam
                 applying.Detail = "Restoring text into the original page layout";
                 if (progress != null) progress.Report(applying);
 
-                string applyOutput = await RunAsync("apply", new string[] { input, translationsPath, output }, token).ConfigureAwait(false);
+                // Pass the extracted geometry back so OCR blocks keep the boxes
+                // the OCR pass measured, not a second (possibly different) read.
+                string applyOutput = await RunAsync("apply", new string[] { input, translationsPath, output, blocksPath }, token).ConfigureAwait(false);
                 if (!string.IsNullOrWhiteSpace(applyOutput))
                 {
                     try

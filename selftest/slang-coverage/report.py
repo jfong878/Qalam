@@ -93,8 +93,11 @@ def main():
     out.append("## What the numbers mean")
     out.append("")
     out.append("- Everything above is *general* dialogue. It contains slang because")
-    out.append("  subtitles contain slang, not because anyone tagged it. The app")
-    out.append("  currently has no way to rank a colloquial line above a flat one.")
+    out.append("  subtitles contain slang, not because anyone tagged it. Register")
+    out.append("  ranking is therefore inferred locally (src/Register.cs): a per-language")
+    out.append("  colloquial/formal lexicon scores each candidate line before the")
+    out.append("  corpus order is applied, so a casual line outranks a flat one that")
+    out.append("  matches equally well.")
     out.append("- A probe-based slang density was measured and then discarded: with")
     out.append("  hand-written profanity lists it is dominated by artefacts (Arabic")
     out.append("  clitics and substrings inflate it by an order of magnitude, and")
@@ -105,9 +108,22 @@ def main():
     out.append("- The sample is a prefix of the stream, so it reflects the first")
     out.append("  documents in the file. Counts good to roughly a percentage point.")
     out.append("- Nearly every language here can fill a 2M pack. Dialogue supply is")
-    out.append("  not what separates them; shipping size, alignment quality, and the")
-    out.append("  absence of any register ranking are what decide whether the")
-    out.append("  examples feel like Reverso's.")
+    out.append("  not what separates them; shipping size and alignment quality decide")
+    out.append("  how much usable dialogue a pack holds.")
+    out.append("")
+    out.append("## Word counting for Chinese and Japanese")
+    out.append("")
+    out.append("The acceptance filter counted words by splitting on spaces, so an")
+    out.append("unspaced sentence counted as one word and failed the two-word minimum.")
+    out.append("Characters in Han and kana scripts are word units now. Both figures are")
+    out.append("in the table's acceptance column: `qalam` is the old whitespace count,")
+    out.append("`aware` is the shipped rule.")
+    for row in rows:
+        if row["lang"] not in ("zh_CN", "zh_TW", "ja"):
+            continue
+        out.append("- %s: %.1f%% under the whitespace count, %.1f%% after."
+                   % (NAMES.get(row["lang"], row["lang"]),
+                      row["accept_qalam"] * 100, row["accept_aware"] * 100))
     out.append("")
 
     path = os.path.join(HERE, "ranking.md")

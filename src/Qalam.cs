@@ -294,7 +294,7 @@ namespace Qalam
             AutoTarget = true;
             Target = "ar";
             DoubleCopyWindowMs = 600;
-            MaxChars = 600;
+            MaxChars = 10000;
             PythonPath = "";
             PdfPythonPath = "";
             SyncFolder = "";
@@ -326,6 +326,9 @@ namespace Qalam
                     if (cfg != null)
                     {
                         if (cfg.MaxChars < 50) cfg.MaxChars = 50;
+                        // The popup-era default capped the main window at 600.
+                        // Existing installs move to the Reverso-class limit.
+                        if (cfg.MaxChars == 600) cfg.MaxChars = 10000;
                         if (cfg.DoubleCopyWindowMs < 150) cfg.DoubleCopyWindowMs = 150;
                         if (string.IsNullOrEmpty(cfg.Target)) cfg.Target = "ar";
                         if (cfg.ExcludedProcesses == null) cfg.ExcludedProcesses = new string[0];
@@ -1621,46 +1624,463 @@ namespace Qalam
     {
         private static readonly HttpClient Http = CreateClient();
         private static MediaPlayer _player;
-        private static string _lastFile;
 
         // Set once at startup so speech can ask the offline worker for the
         // dialect reading without the popup holding a config or a client.
         public static Func<string, string, string> Vocalizer;
 
+        private static readonly string AudioCache = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Qalam", "audio-cache");
+        private static readonly Dictionary<string, Task<string>> ChunkTasks =
+            new Dictionary<string, Task<string>>(StringComparer.OrdinalIgnoreCase);
+        private static readonly object ChunkGate = new object();
+        private static List<string> _chunks = new List<string>();
+        private static int _chunkIndex;
+        private static string _chunkKey = "";
+        private static string _chunkLanguage = "";
+        private static Task _prefetch;
+        private static int _generation;
+        private static double _speed = 1.0;
+        private static string _activeText = "";
+        private static string _activeLanguage = "";
+        private static bool _paused;
+        private static bool _finished = true;
+        private static double _pendingSeek = -1;
+        private static int _seekId;
+
+        public static bool Paused { get { return _paused; } }
+        public static string ActiveText { get { return _activeText; } }
+        public static string ActiveLanguage { get { return _activeLanguage; } }
+        public static double Speed { get { return _speed; } }
+
+        public static bool Matches(string text, string language)
+        {
+            string normalized = string.IsNullOrEmpty(language)
+                ? ""
+                : (SpeechLanguage.Normalize(language) ?? language);
+            return !_finished &&
+                string.Equals(_activeText, text ?? "", StringComparison.Ordinal) &&
+                string.Equals(_activeLanguage, normalized, StringComparison.Ordinal);
+        }
+
+        public static void Stop()
+        {
+            _generation++;
+            try { if (_player != null) _player.Stop(); } catch { }
+            _paused = false;
+            _finished = true;
+            _activeText = "";
+            _activeLanguage = "";
+            _chunkIndex = 0;
+            _chunks = new List<string>();
+            _pendingSeek = -1;
+            _seekId++;
+        }
+
+        public static void Pause()
+        {
+            if (_player == null || _paused || _finished) return;
+            try { _player.Pause(); _paused = true; } catch { }
+        }
+
         public static async Task SpeakAsync(string text, string language)
         {
+            await PlayAsync(text, language, 1.0, true).ConfigureAwait(true);
+        }
+
+        public static async Task PlayAsync(string text, string language, double speed, bool restart)
+        {
             if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(language)) return;
-            text = PrepareSpoken(text, language);
-            if (text.Length > 220) text = text.Substring(0, 220);
+            language = SpeechLanguage.Normalize(language) ?? language;
 
-            string url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=" +
-                         Uri.EscapeDataString(language) + "&q=" + Uri.EscapeDataString(text);
-            byte[] audio = await Http.GetByteArrayAsync(url).ConfigureAwait(true);
-            if (audio == null || audio.Length < 1000) throw new InvalidOperationException("Empty audio response.");
-
-            string file = Path.Combine(Path.GetTempPath(), "qalam-tts-" + Guid.NewGuid().ToString("N") + ".mp3");
-            File.WriteAllBytes(file, audio);
-
-            if (_player == null)
+            if (!restart && _player != null && !_finished && Matches(text, language))
             {
-                _player = new MediaPlayer();
-                _player.MediaFailed += delegate(object sender, ExceptionEventArgs e)
+                _speed = speed > 0 ? speed : 1.0;
+                ApplySpeed();
+                _player.Play();
+                _paused = false;
+                return;
+            }
+
+            int generation = ++_generation;
+            _seekId++;
+            _pendingSeek = -1;
+            _finished = true;
+            _paused = false;
+            _activeText = text;
+            _activeLanguage = language;
+            _speed = speed > 0 ? speed : 1.0;
+            try { if (_player != null) _player.Stop(); } catch { }
+
+            string spoken = PrepareSpoken(text, language);
+            if (string.IsNullOrWhiteSpace(spoken)) return;
+            List<string> chunks = Chunk(spoken, 180, 6000);
+            if (chunks.Count == 0) return;
+
+            string key = CacheKey(text, language);
+            _chunks = chunks;
+            _chunkIndex = 0;
+            _chunkKey = key;
+            _chunkLanguage = language;
+            EnsurePlayer();
+
+            string first = await GetChunkFileAsync(key, chunks[0], language, 0, chunks.Count).ConfigureAwait(true);
+            if (generation != _generation) return;
+
+            OpenChunk(first);
+            _prefetch = PrefetchAsync(generation, key, chunks, language);
+        }
+
+        private static void EnsurePlayer()
+        {
+            if (_player != null) return;
+            _player = new MediaPlayer();
+            _player.MediaFailed += delegate(object sender, ExceptionEventArgs e)
+            {
+                Logger.Write("tts playback: " + e.ErrorException.Message);
+            };
+            _player.MediaEnded += delegate { AdvanceChunk(); };
+            _player.MediaOpened += delegate
+            {
+                try
                 {
-                    Logger.Write("tts playback: " + e.ErrorException.Message);
-                };
-            }
-
-            _player.Close();
-            string previous = _lastFile;
-            _lastFile = file;
-            _player.Open(new Uri(file));
-            _player.Play();
-
-            if (previous != null)
-            {
-                try { File.Delete(previous); }
+                    if (_pendingSeek >= 0 && _player.NaturalDuration.HasTimeSpan)
+                    {
+                        double fraction = Math.Max(0.0, Math.Min(0.98, _pendingSeek));
+                        _player.Position = TimeSpan.FromTicks(
+                            (long)(_player.NaturalDuration.TimeSpan.Ticks * fraction));
+                    }
+                }
                 catch { }
+                _pendingSeek = -1;
+                try { _player.SpeedRatio = _speed; } catch { }
+                _player.Play();
+            };
+        }
+
+        private static void OpenChunk(string file)
+        {
+            OpenChunk(file, -1);
+        }
+
+        private static void OpenChunk(string file, double fraction)
+        {
+            _pendingSeek = fraction;
+            _player.Open(new Uri(file));
+            if (fraction < 0)
+            {
+                try { _player.SpeedRatio = _speed; } catch { }
+                _player.Play();
             }
+            _paused = false;
+            _finished = false;
+        }
+
+        // MediaPlayer only applies a new SpeedRatio at a seek. Without this
+        // nudge the old rate keeps playing until the buffered audio drains,
+        // which is what made the Slow button feel late.
+        private static void ApplySpeed()
+        {
+            if (_player == null) return;
+            try { _player.SpeedRatio = _speed; } catch { return; }
+            try
+            {
+                TimeSpan position = _player.Position - TimeSpan.FromMilliseconds(40);
+                _player.Position = position > TimeSpan.Zero ? position : TimeSpan.Zero;
+            }
+            catch { }
+        }
+
+        // Start (or continue) the current passage at a clicked word. The word
+        // index maps to a character offset in the spoken text, then to the
+        // chunk that holds it and a fraction of that chunk's duration.
+        public static async void SeekToWord(string text, string language, int wordIndex, int wordCount)
+        {
+            int seekId = ++_seekId;
+            try
+            {
+                if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(language)) return;
+                language = SpeechLanguage.Normalize(language) ?? language;
+                if (wordIndex < 0) wordIndex = 0;
+                if (wordCount > 0 && wordIndex >= wordCount) wordIndex = wordCount - 1;
+
+                bool same = Matches(text, language) && _player != null;
+                int generation;
+                string spoken;
+                List<string> chunks;
+                string key;
+
+                if (same)
+                {
+                    generation = _generation;
+                    spoken = PrepareSpoken(text, language);
+                    chunks = _chunks;
+                    key = _chunkKey;
+                    if (chunks == null || chunks.Count == 0) return;
+                }
+                else
+                {
+                    generation = ++_generation;
+                    _finished = true;
+                    _paused = false;
+                    _pendingSeek = -1;
+                    _speed = 1.0;
+                    _activeText = text;
+                    _activeLanguage = language;
+                    try { if (_player != null) _player.Stop(); } catch { }
+
+                    spoken = PrepareSpoken(text, language);
+                    chunks = Chunk(spoken, 180, 6000);
+                    if (chunks.Count == 0) return;
+                    key = CacheKey(text, language);
+                    _chunks = chunks;
+                    _chunkIndex = 0;
+                    _chunkKey = key;
+                    _chunkLanguage = language;
+                    EnsurePlayer();
+                }
+
+                int target;
+                double fraction;
+                if (!LocateWord(spoken, chunks, wordIndex, out target, out fraction)) return;
+
+                if (same && target == _chunkIndex && _player.NaturalDuration.HasTimeSpan)
+                {
+                    _player.Position = TimeSpan.FromTicks(
+                        (long)(_player.NaturalDuration.TimeSpan.Ticks * fraction));
+                    ApplySpeed();
+                    _player.Play();
+                    _paused = false;
+                    _finished = false;
+                    ListenControl.NotifyStarted();
+                    return;
+                }
+
+                string file;
+                try
+                {
+                    file = await GetChunkFileAsync(key, chunks[target], language, target, chunks.Count)
+                        .ConfigureAwait(true);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Write("tts seek chunk: " + ex.Message);
+                    return;
+                }
+                if (seekId != _seekId || generation != _generation) return;
+
+                _chunkIndex = target;
+                OpenChunk(file, fraction);
+                _prefetch = PrefetchAsync(generation, key, chunks, language);
+                ListenControl.NotifyStarted();
+            }
+            catch (Exception ex)
+            {
+                Logger.Write("tts seek: " + ex.Message);
+            }
+        }
+
+        private static bool LocateWord(string spoken, List<string> chunks, int wordIndex,
+            out int targetIndex, out double fraction)
+        {
+            targetIndex = 0;
+            fraction = 0;
+            System.Text.RegularExpressions.MatchCollection words =
+                System.Text.RegularExpressions.Regex.Matches(spoken, @"\S+");
+            if (words.Count == 0 || chunks == null || chunks.Count == 0) return false;
+            if (wordIndex >= words.Count) wordIndex = words.Count - 1;
+            int offset = words[wordIndex].Index;
+            int cursor = 0;
+            for (int i = 0; i < chunks.Count; i++)
+            {
+                string chunk = chunks[i];
+                if (string.IsNullOrEmpty(chunk)) continue;
+                int start = spoken.IndexOf(chunk, cursor, StringComparison.Ordinal);
+                if (start < 0) start = cursor;
+                int end = start + chunk.Length;
+                if (offset < end || i == chunks.Count - 1)
+                {
+                    targetIndex = i;
+                    fraction = (double)(offset - start) / chunk.Length;
+                    if (fraction < 0) fraction = 0;
+                    if (fraction > 0.98) fraction = 0.98;
+                    return true;
+                }
+                cursor = end;
+            }
+            return false;
+        }
+
+        private static async void AdvanceChunk()
+        {
+            if (_finished) return;
+            int generation = _generation;
+            if (_chunkIndex + 1 >= _chunks.Count)
+            {
+                FinishPlayback();
+                return;
+            }
+
+            _chunkIndex++;
+            string file;
+            try
+            {
+                file = await GetChunkFileAsync(_chunkKey, _chunks[_chunkIndex], _chunkLanguage,
+                    _chunkIndex, _chunks.Count).ConfigureAwait(true);
+            }
+            catch (Exception ex)
+            {
+                Logger.Write("tts next: " + ex.Message);
+                FinishPlayback();
+                return;
+            }
+            if (generation != _generation) return;
+            OpenChunk(file);
+        }
+
+        private static void FinishPlayback()
+        {
+            _finished = true;
+            _paused = false;
+            if (System.Windows.Application.Current != null)
+                System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(ListenControl.NotifyEnded));
+            else
+                ListenControl.NotifyEnded();
+        }
+
+        private static async Task PrefetchAsync(int generation, string key, List<string> chunks, string language)
+        {
+            // Fetch ahead while the first chunk is already speaking. One at a
+            // time: Google throttles parallel translate_tts requests hard.
+            for (int i = 1; i < chunks.Count; i++)
+            {
+                if (generation != _generation) return;
+                try
+                {
+                    await GetChunkFileAsync(key, chunks[i], language, i, chunks.Count).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Write("tts prefetch: " + ex.Message);
+                    return;
+                }
+            }
+        }
+
+        private static Task<string> GetChunkFileAsync(string key, string chunk, string language, int index, int total)
+        {
+            string path = Path.Combine(AudioCache, key + "-" + index.ToString("D3") + ".mp3");
+            try
+            {
+                if (File.Exists(path) && new FileInfo(path).Length > 100)
+                    return Task.FromResult(path);
+            }
+            catch { }
+
+            lock (ChunkGate)
+            {
+                Task<string> existing;
+                if (ChunkTasks.TryGetValue(path, out existing)) return existing;
+                existing = BuildChunkAsync(path, chunk, language, index, total);
+                ChunkTasks[path] = existing;
+                return existing;
+            }
+        }
+
+        private static async Task<string> BuildChunkAsync(string path, string chunk, string language, int index, int total)
+        {
+            try
+            {
+                Directory.CreateDirectory(AudioCache);
+                byte[] audio = await FetchAsync(chunk, language, index, total).ConfigureAwait(false);
+                if (audio == null || audio.Length < 100) throw new InvalidOperationException("Empty audio response.");
+                string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                File.WriteAllBytes(temp, audio);
+                try
+                {
+                    if (File.Exists(path)) File.Delete(path);
+                    File.Move(temp, path);
+                }
+                catch
+                {
+                    try { File.Delete(temp); } catch { }
+                    throw;
+                }
+                PruneCache();
+                return path;
+            }
+            finally
+            {
+                lock (ChunkGate) ChunkTasks.Remove(path);
+            }
+        }
+
+        private static void PruneCache()
+        {
+            try
+            {
+                FileInfo[] files = new DirectoryInfo(AudioCache).GetFiles("*.mp3");
+                if (files.Length <= 200) return;
+                Array.Sort(files, delegate(FileInfo a, FileInfo b)
+                {
+                    return a.LastWriteTimeUtc.CompareTo(b.LastWriteTimeUtc);
+                });
+                int remove = files.Length - 160;
+                for (int i = 0; i < remove; i++)
+                    try { files[i].Delete(); } catch { }
+            }
+            catch { }
+        }
+
+        private static string CacheKey(string text, string language)
+        {
+            string material = (language ?? "") + "\n" + Pronunciation.Current + "\n" + (text ?? "");
+            using (System.Security.Cryptography.SHA256 sha = System.Security.Cryptography.SHA256.Create())
+            {
+                byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(material));
+                StringBuilder builder = new StringBuilder(hash.Length * 2);
+                foreach (byte b in hash) builder.Append(b.ToString("x2"));
+                return builder.ToString();
+            }
+        }
+
+        private static List<string> Chunk(string text, int size, int cap)
+        {
+            List<string> chunks = new List<string>();
+            if (text.Length > cap) text = text.Substring(0, cap);
+            string rest = text.Trim();
+            while (rest.Length > 0)
+            {
+                int take = Math.Min(size, rest.Length);
+                if (take < rest.Length)
+                {
+                    int cut = rest.LastIndexOf(' ', take - 1);
+                    if (cut > size / 3) take = cut + 1;
+                }
+                chunks.Add(rest.Substring(0, take).Trim());
+                rest = rest.Substring(take).TrimStart();
+            }
+            return chunks;
+        }
+
+        private static async Task<byte[]> FetchAsync(string chunk, string language, int index, int total)
+        {
+            string url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=" +
+                Uri.EscapeDataString(language) + "&q=" + Uri.EscapeDataString(chunk) +
+                "&total=" + total + "&idx=" + index + "&textlen=" + chunk.Length;
+            Exception first = null;
+            try
+            {
+                return await Http.GetByteArrayAsync(url).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                first = ex;
+            }
+            Logger.Write("tts primary: " + (first == null ? "unknown" : first.Message));
+            string backup = url.Replace("translate.google.com", "translate.googleapis.com")
+                               .Replace("client=tw-ob", "client=gtx");
+            return await Http.GetByteArrayAsync(backup).ConfigureAwait(false);
         }
 
         // Fuṣḥā speaks the text as written. A lahja register first asks the
@@ -1680,8 +2100,9 @@ namespace Qalam
         private static HttpClient CreateClient()
         {
             HttpClient client = new HttpClient();
-            client.Timeout = TimeSpan.FromSeconds(8);
+            client.Timeout = TimeSpan.FromSeconds(10);
             client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
+            try { client.DefaultRequestHeaders.Referrer = new Uri("https://translate.google.com/"); } catch { }
             return client;
         }
     }
@@ -2100,17 +2521,22 @@ namespace Qalam
 
         private readonly Border _root;
         private readonly TextBlock _source;
+        private readonly Button _sourceListenButton;
+        private readonly Grid _sourceRow;
         private readonly TextBlock _translation;
+        private readonly Button _translationListenButton;
+        private readonly Grid _translationRow;
         private readonly TextBlock _langPair;
         private readonly Button _targetButton;
         private readonly ContextMenu _targetMenu;
         private readonly TextBlock _status;
+        private string _sourceText = "";
+        private string _sourceSpeechLang = "";
         private readonly Border _tashkeelPanel;
         private readonly TextBlock _tashkeelLabel;
         private readonly TextBlock _tashkeel;
         private readonly TextBlock _transliteration;
         private readonly Button _copyButton;
-        private readonly Button _listenButton;
         private readonly Button _charactersButton;
         private readonly Border _synonymsPanel;
         private readonly TextBlock _synonyms;
@@ -2209,12 +2635,28 @@ namespace Qalam
 
             StackPanel body = new StackPanel();
 
+            _sourceRow = new Grid();
+            _sourceRow.Margin = new Thickness(0, 14, 0, 0);
+            _sourceRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            _sourceRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
             _source = Ui.Label("", 12.5, Ui.Muted, FontWeights.Normal);
             _source.TextWrapping = TextWrapping.Wrap;
             _source.MaxHeight = 54;
-            _source.Margin = new Thickness(0, 14, 0, 0);
+            _source.VerticalAlignment = VerticalAlignment.Top;
             _source.ClipToBounds = true;
-            body.Children.Add(_source);
+            Grid.SetColumn(_source, 0);
+            _sourceRow.Children.Add(_source);
+
+            _sourceListenButton = Ui.SmallOutlineButton("Listen", delegate { });
+            new ListenControl(_sourceListenButton, delegate { return _sourceText; }, delegate { return _sourceSpeechLang; });
+            _sourceListenButton.Margin = new Thickness(8, 0, 0, 0);
+            _sourceListenButton.VerticalAlignment = VerticalAlignment.Top;
+            _sourceListenButton.IsEnabled = false;
+            Grid.SetColumn(_sourceListenButton, 1);
+            _sourceRow.Children.Add(_sourceListenButton);
+
+            body.Children.Add(_sourceRow);
 
             Border divider = new Border();
             divider.Height = 1;
@@ -2222,11 +2664,28 @@ namespace Qalam
             divider.Margin = new Thickness(0, 14, 0, 0);
             body.Children.Add(divider);
 
+            _translationRow = new Grid();
+            _translationRow.Margin = new Thickness(0, 12, 0, 0);
+            _translationRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            _translationRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
             _translation = Ui.Label("", 21, Ui.Bright, FontWeights.Normal);
             _translation.TextWrapping = TextWrapping.Wrap;
             _translation.LineHeight = 30;
-            _translation.Margin = new Thickness(0, 12, 0, 0);
-            body.Children.Add(_translation);
+            _translation.ToolTip = "Click any word to play from there";
+            _translation.VerticalAlignment = VerticalAlignment.Top;
+            Grid.SetColumn(_translation, 0);
+            _translationRow.Children.Add(_translation);
+
+            _translationListenButton = Ui.SmallOutlineButton("Listen", delegate { });
+            new ListenControl(_translationListenButton, delegate { return _translationText; }, delegate { return _speechLang; });
+            _translationListenButton.Margin = new Thickness(8, 0, 0, 0);
+            _translationListenButton.VerticalAlignment = VerticalAlignment.Top;
+            _translationListenButton.IsEnabled = false;
+            Grid.SetColumn(_translationListenButton, 1);
+            _translationRow.Children.Add(_translationListenButton);
+
+            body.Children.Add(_translationRow);
 
             _status = Ui.Label("", 11.5, Ui.Muted, FontWeights.Normal);
             _status.TextWrapping = TextWrapping.Wrap;
@@ -2260,7 +2719,8 @@ namespace Qalam
             Grid.SetColumn(_charactersButton, 1);
             tashkeelHeader.Children.Add(_charactersButton);
 
-            Button listenTashkeel = Ui.SmallOutlineButton("Listen", delegate { Speak(_tashkeelSpeech, _tashkeelSpeechLang, _tashkeelKind); });
+            Button listenTashkeel = Ui.SmallOutlineButton("Listen", delegate { });
+            new ListenControl(listenTashkeel, delegate { return _tashkeelSpeech; }, delegate { return _tashkeelSpeechLang; });
             listenTashkeel.Margin = new Thickness(0, 0, 6, 0);
             Grid.SetColumn(listenTashkeel, 2);
             tashkeelHeader.Children.Add(listenTashkeel);
@@ -2368,10 +2828,6 @@ namespace Qalam
             footerButtons.Orientation = Orientation.Horizontal;
             footerButtons.VerticalAlignment = VerticalAlignment.Center;
 
-            _listenButton = Ui.SmallOutlineButton("Listen", delegate { Speak(_translationText, _speechLang, "Translation"); });
-            _listenButton.Margin = new Thickness(0, 0, 8, 0);
-            _listenButton.IsEnabled = false;
-            footerButtons.Children.Add(_listenButton);
 
             _copyButton = Ui.PrimaryButton("Copy translation", delegate { Copy(_translationText, "Translation"); });
             footerButtons.Children.Add(_copyButton);
@@ -2507,6 +2963,7 @@ namespace Qalam
 
         public void ShowLoading(string source)
         {
+            ListenControl.ResetAll();
             _source.Visibility = Visibility.Visible;
             _source.Text = Normalize(source);
             bool arabic = ArabicText.ContainsArabic(source);
@@ -2522,7 +2979,10 @@ namespace Qalam
             _translationText = "";
             _speechLang = "";
             _copyButton.IsEnabled = false;
-            _listenButton.IsEnabled = false;
+            _sourceText = source ?? "";
+            _sourceSpeechLang = SpeechLanguage.Resolve(_sourceText, null);
+            if (_sourceListenButton != null) _sourceListenButton.IsEnabled = !string.IsNullOrEmpty(_sourceText);
+            if (_translationListenButton != null) _translationListenButton.IsEnabled = false;
             _status.Text = "";
             UpdateTargetButton();
             _tashkeelPanel.Visibility = Visibility.Collapsed;
@@ -2540,11 +3000,14 @@ namespace Qalam
 
         public void ShowResult(TranslationResult result)
         {
+            ListenControl.ResetAll();
             _source.Visibility = Visibility.Visible;
             _source.Text = Normalize(result.SourceText);
             bool sourceArabic = ArabicText.ContainsArabic(result.SourceText);
             _source.FlowDirection = sourceArabic ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
             _source.TextAlignment = sourceArabic ? TextAlignment.Right : TextAlignment.Left;
+            _sourceText = result.SourceText ?? "";
+            _sourceSpeechLang = SpeechLanguage.Resolve(_sourceText, result.Detected);
 
             string detected = string.IsNullOrEmpty(result.Detected) ? "auto" : result.Detected.ToUpperInvariant();
             string target = string.IsNullOrEmpty(result.Target) ? "" : result.Target.ToUpperInvariant();
@@ -2554,13 +3017,16 @@ namespace Qalam
 
             _translation.FontSize = 21;
             _copyButton.IsEnabled = true;
-            _speechLang = result.TashkeelOnly ? (result.Detected == null ? "ar" : result.Detected) : (result.Target == null ? "" : result.Target);
-            _listenButton.IsEnabled = result.Error == null && !string.IsNullOrEmpty(result.Translation);
+            _speechLang = result.TashkeelOnly
+                ? SpeechLanguage.Resolve(result.SourceText, result.Detected)
+                : SpeechLanguage.Resolve(result.Translation, result.Target);
+            if (_sourceListenButton != null) _sourceListenButton.IsEnabled = !string.IsNullOrEmpty(_sourceText);
+            if (_translationListenButton != null) _translationListenButton.IsEnabled = result.Error == null && !string.IsNullOrEmpty(result.Translation);
 
             if (result.TashkeelOnly)
             {
                 _source.Visibility = Visibility.Collapsed;
-                _translation.Text = result.SourceText;
+                SpokenText.Render(_translation, result.SourceText, _speechLang);
                 _translation.Foreground = Ui.Bright;
                 _translation.FlowDirection = FlowDirection.RightToLeft;
                 _translation.TextAlignment = TextAlignment.Right;
@@ -2571,7 +3037,8 @@ namespace Qalam
             else
             {
                 bool arabic = ArabicText.ContainsArabic(result.Translation);
-                _translation.Text = string.IsNullOrEmpty(result.Translation) ? "\u2014" : result.Translation;
+                if (string.IsNullOrEmpty(result.Translation)) _translation.Text = "\u2014";
+                else SpokenText.Render(_translation, result.Translation, _speechLang);
                 _translation.Foreground = Ui.Bright;
                 _translation.FlowDirection = arabic ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
                 _translation.TextAlignment = arabic ? TextAlignment.Right : TextAlignment.Left;
@@ -3130,6 +3597,12 @@ namespace Qalam
                 {
                     Logger.Write("uia selection chars=" + selected.Length);
                     Logger.Write("trigger accepted: " + processName + " (uia)");
+                    if (selected.Length > 600)
+                    {
+                        ShowMainWindow();
+                        if (_main != null) _main.TranslateText(selected);
+                        return;
+                    }
                     _popup.ShowLoading(selected);
                     await AnalyzeAndShowAsync(selected, false);
                     return;
@@ -3157,6 +3630,12 @@ namespace Qalam
                 }
 
                 Logger.Write("trigger accepted: " + processName + " (clipboard)");
+                if (text.Length > 600)
+                {
+                    ShowMainWindow();
+                    if (_main != null) _main.TranslateText(text);
+                    return;
+                }
                 _popup.ShowLoading(text);
                 await AnalyzeAndShowAsync(text, false);
             }
@@ -3503,11 +3982,32 @@ namespace Qalam
                     progressWindow.CancelRequested += delegate { cancel.Cancel(); };
                     progressWindow.Show();
 
+                    // The translators stop before writing and hand back every
+                    // passage they produced, so the user can fix wording first.
+                    Func<System.Collections.Generic.IList<DocumentSegment>, bool> review =
+                        delegate(System.Collections.Generic.IList<DocumentSegment> segments)
+                    {
+                        bool accepted = false;
+                        System.Windows.Application.Current.Dispatcher.Invoke(new Action(delegate
+                        {
+                            progressWindow.Hide();
+                            DocumentReviewWindow window = new DocumentReviewWindow(
+                                Path.GetFileName(input), target, segments);
+                            accepted = window.ShowDialog() == true;
+                            if (accepted)
+                            {
+                                if (!progressWindow.IsVisible) progressWindow.Show();
+                                progressWindow.Activate();
+                            }
+                        }));
+                        return accepted;
+                    };
+
                     try
                     {
                         Progress<DocumentProgress> progress = new Progress<DocumentProgress>(progressWindow.UpdateProgress);
                         DocumentTranslationReport report = await Task.Run(async () => await _documents.TranslateAsync(
-                            input, output, target, source, progress, cancel.Token).ConfigureAwait(false));
+                            input, output, target, source, progress, cancel.Token, review).ConfigureAwait(false));
 
                         progressWindow.AllowClose();
                         progressWindow.Close();

@@ -61,6 +61,14 @@ namespace Qalam
         }
     }
 
+    internal sealed class DocumentSegment
+    {
+        public string Id { get; set; }
+        public string Label { get; set; }
+        public string Source { get; set; }
+        public string Translation { get; set; }
+    }
+
     internal sealed class DocumentTranslationException : Exception
     {
         public DocumentTranslationException(string message) : base(message) { }
@@ -274,6 +282,7 @@ namespace Qalam
             public XElement Paragraph;
             public string Text;
             public List<RunInfo> Runs;
+            public string Translation;
         }
 
         public static string DetectSource(string path)
@@ -302,7 +311,8 @@ namespace Qalam
         }
 
         public async Task<DocxTranslationResult> TranslateAsync(string input, string tempOutput, string target,
-            IProgress<DocumentProgress> progress, CancellationToken token)
+            IProgress<DocumentProgress> progress, CancellationToken token,
+            Func<IList<DocumentSegment>, bool> review = null)
         {
             File.Copy(input, tempOutput, true);
 
@@ -334,6 +344,7 @@ namespace Qalam
                 DocumentTextTranslator translator = new DocumentTextTranslator(_translator ?? new TranslationService());
                 int done = 0;
                 int processed = 0;
+                List<ParagraphInfo> translatedParagraphs = new List<ParagraphInfo>();
                 foreach (KeyValuePair<string, List<ParagraphInfo>> part in prepared)
                 {
                     foreach (ParagraphInfo paragraph in part.Value)
@@ -344,7 +355,8 @@ namespace Qalam
                             string translated = await translator.TranslateAsync(paragraph.Text, target, token).ConfigureAwait(false);
                             if (!string.IsNullOrWhiteSpace(translated))
                             {
-                                ApplyTranslation(paragraph, translated, target);
+                                paragraph.Translation = translated;
+                                translatedParagraphs.Add(paragraph);
                                 done++;
                             }
                         }
@@ -369,6 +381,40 @@ namespace Qalam
 
                 if (done == 0)
                     throw new DocumentTranslationException("None of the paragraphs could be translated. Check your connection and try again.");
+
+                // Held back until review: the document parts are only written
+                // after the user has had a chance to edit each passage.
+                if (review != null)
+                {
+                    List<DocumentSegment> segments = new List<DocumentSegment>();
+                    for (int i = 0; i < translatedParagraphs.Count; i++)
+                    {
+                        DocumentSegment segment = new DocumentSegment();
+                        segment.Id = i.ToString();
+                        segment.Label = "Paragraph " + (i + 1);
+                        segment.Source = translatedParagraphs[i].Text;
+                        segment.Translation = translatedParagraphs[i].Translation;
+                        segments.Add(segment);
+                    }
+
+                    if (!review(segments)) throw new OperationCanceledException(token);
+
+                    done = 0;
+                    for (int i = 0; i < translatedParagraphs.Count; i++)
+                    {
+                        string edited = segments[i].Translation == null ? "" : segments[i].Translation.Trim();
+                        translatedParagraphs[i].Translation = edited;
+                        if (edited.Length > 0) done++;
+                    }
+                    if (done == 0)
+                        throw new DocumentTranslationException("Every translation was cleared in review. The original file was not changed.");
+                }
+
+                foreach (ParagraphInfo paragraph in translatedParagraphs)
+                {
+                    if (string.IsNullOrWhiteSpace(paragraph.Translation)) continue;
+                    ApplyTranslation(paragraph, paragraph.Translation, target);
+                }
 
                 foreach (KeyValuePair<string, XDocument> part in parts)
                 {

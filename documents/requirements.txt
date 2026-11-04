@@ -1,2 +1,4 @@
 pymupdf==1.28.2
+uharfbuzz==0.56.0
+fonttools==4.63.0
 msvc-runtime==14.51.36231

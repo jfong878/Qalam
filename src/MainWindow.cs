@@ -51,6 +51,13 @@ namespace Qalam
         private readonly Button _wordingButton;
         private readonly Border _wordingCard;
         private readonly TextBlock _wordingText;
+        private readonly Button _sourceListenButton;
+        private readonly Button _translationListenButton;
+        private readonly Button _swapButton;
+        private string _sourceSpeechText = "";
+        private string _sourceSpeechLang = "";
+        private string _translationSpeechText = "";
+        private string _translationSpeechLang = "";
 
         private bool _busy;
         private bool _allowClose;
@@ -99,6 +106,7 @@ namespace Qalam
             header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
             Border mark = new Border();
             mark.Width = 46;
@@ -135,12 +143,25 @@ namespace Qalam
             Grid.SetColumn(_providerButton, 2);
             header.Children.Add(_providerButton);
 
+            // Reverso-style swap: reverse the pair and the two texts. Qalam
+            // detects the source, so the old source becomes the explicit
+            // target after the swap.
+            _swapButton = Ui.IconButton("\u21c4", delegate { SwapLanguages(); });
+            _swapButton.FontSize = 15;
+            _swapButton.Width = 28;
+            _swapButton.Height = 28;
+            _swapButton.Margin = new Thickness(0, 0, 8, 0);
+            _swapButton.VerticalAlignment = VerticalAlignment.Center;
+            _swapButton.ToolTip = "Swap languages";
+            Grid.SetColumn(_swapButton, 3);
+            header.Children.Add(_swapButton);
+
             _targetButton = Ui.SmallOutlineButton("Arabic", delegate { OpenTargetMenu(); });
             _targetButton.FontSize = 11.5;
             _targetButton.Padding = new Thickness(0);
             _targetButton.VerticalAlignment = VerticalAlignment.Center;
             _targetButton.MinWidth = 146;
-            Grid.SetColumn(_targetButton, 3);
+            Grid.SetColumn(_targetButton, 4);
             header.Children.Add(_targetButton);
 
             _themeButton = Ui.SmallOutlineButton("System  \u25be", delegate { OpenThemeMenu(); });
@@ -150,7 +171,7 @@ namespace Qalam
             _themeButton.MinWidth = 88;
             _themeButton.Margin = new Thickness(8, 0, 0, 0);
             _themeButton.ToolTip = "Theme: System follows the Windows app theme";
-            Grid.SetColumn(_themeButton, 4);
+            Grid.SetColumn(_themeButton, 5);
             header.Children.Add(_themeButton);
 
             _targetMenu = BuildTargetMenu();
@@ -189,6 +210,7 @@ namespace Qalam
             {
                 UpdatePlaceholder();
                 if (_wordingCard != null) _wordingCard.Visibility = Visibility.Collapsed;
+                if (string.IsNullOrWhiteSpace(_input.Text)) ResetResult();
             };
             _input.PreviewKeyDown += delegate(object sender, KeyEventArgs e)
             {
@@ -233,12 +255,9 @@ namespace Qalam
 
             Button clear = Ui.SmallOutlineButton("Clear", delegate
             {
+                bool hadText = !string.IsNullOrEmpty(_input.Text);
                 _input.Clear();
-                _resultCard.Visibility = Visibility.Collapsed;
-                _tashkeelCard.Visibility = Visibility.Collapsed;
-                _grammarCard.Visibility = Visibility.Collapsed;
-                _wordingCard.Visibility = Visibility.Collapsed;
-                _status.Text = "";
+                if (!hadText) ResetResult();
                 _input.Focus();
             });
             clear.Margin = new Thickness(9, 0, 0, 0);
@@ -336,18 +355,51 @@ namespace Qalam
             resultHeader.Children.Add(_copyButton);
             resultStack.Children.Add(resultHeader);
 
+            Grid translationRow = new Grid();
+            translationRow.Margin = new Thickness(0, 14, 0, 0);
+            translationRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            translationRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
             _translation = Ui.Label("", 22, Ui.Bright, FontWeights.Normal);
             _translation.TextWrapping = TextWrapping.Wrap;
             _translation.LineHeight = 32;
-            _translation.Margin = new Thickness(0, 14, 0, 0);
-            resultStack.Children.Add(_translation);
+            _translation.ToolTip = "Click any word to play from there";
+            _translation.VerticalAlignment = VerticalAlignment.Top;
+            Grid.SetColumn(_translation, 0);
+            translationRow.Children.Add(_translation);
+
+            _translationListenButton = Ui.SmallOutlineButton("Listen", delegate { });
+            new ListenControl(_translationListenButton, delegate { return _translationSpeechText; }, delegate { return _translationSpeechLang; });
+            _translationListenButton.Margin = new Thickness(8, 0, 0, 0);
+            _translationListenButton.VerticalAlignment = VerticalAlignment.Top;
+            _translationListenButton.IsEnabled = false;
+            Grid.SetColumn(_translationListenButton, 1);
+            translationRow.Children.Add(_translationListenButton);
+
+            resultStack.Children.Add(translationRow);
+
+            Grid sourceRow = new Grid();
+            sourceRow.Margin = new Thickness(0, 13, 0, 0);
+            sourceRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            sourceRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
             _sourceText = Ui.Label("", 11, Ui.Faint, FontWeights.Normal);
             _sourceText.TextWrapping = TextWrapping.Wrap;
             _sourceText.MaxHeight = 54;
             _sourceText.ClipToBounds = true;
-            _sourceText.Margin = new Thickness(0, 13, 0, 0);
-            resultStack.Children.Add(_sourceText);
+            _sourceText.VerticalAlignment = VerticalAlignment.Top;
+            Grid.SetColumn(_sourceText, 0);
+            sourceRow.Children.Add(_sourceText);
+
+            _sourceListenButton = Ui.SmallOutlineButton("Listen", delegate { });
+            new ListenControl(_sourceListenButton, delegate { return _sourceSpeechText; }, delegate { return _sourceSpeechLang; });
+            _sourceListenButton.Margin = new Thickness(8, 0, 0, 0);
+            _sourceListenButton.VerticalAlignment = VerticalAlignment.Top;
+            _sourceListenButton.IsEnabled = false;
+            Grid.SetColumn(_sourceListenButton, 1);
+            sourceRow.Children.Add(_sourceListenButton);
+
+            resultStack.Children.Add(sourceRow);
 
             _resultCard.Child = resultStack;
             stack.Children.Add(_resultCard);
@@ -369,7 +421,8 @@ namespace Qalam
             _tashkeelTitle.VerticalAlignment = VerticalAlignment.Center;
             tashkeelHeader.Children.Add(_tashkeelTitle);
 
-            Button listenTashkeel = Ui.SmallOutlineButton("Listen", delegate { SpeakTashkeel(); });
+            Button listenTashkeel = Ui.SmallOutlineButton("Listen", delegate { });
+            new ListenControl(listenTashkeel, delegate { return string.IsNullOrEmpty(_transcriptionSpeech) ? _tashkeelText.Text : _transcriptionSpeech; }, delegate { return _transcriptionSpeechLang; });
             listenTashkeel.Margin = new Thickness(0, 0, 6, 0);
             Grid.SetColumn(listenTashkeel, 1);
             tashkeelHeader.Children.Add(listenTashkeel);
@@ -465,6 +518,22 @@ namespace Qalam
             }
             catch { }
             FocusInput();
+        }
+
+        public void TranslateText(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return;
+            try
+            {
+                _input.Text = text;
+                UpdatePlaceholder();
+                FocusInput();
+                Translate();
+            }
+            catch (Exception ex)
+            {
+                Logger.Write("main translate text: " + ex.Message);
+            }
         }
 
         public void RefreshTarget()
@@ -673,6 +742,65 @@ namespace Qalam
             UpdateTargetButton();
         }
 
+        private void SwapLanguages()
+        {
+            if (_busy) return;
+
+            TranslationResult current = _currentResult;
+            string translated = current == null ? "" : (current.Translation ?? "").Trim();
+            string source = current == null ? "" : (current.Detected ?? "").Trim();
+            string target = current == null ? "" : (current.Target ?? "").Trim();
+            if (translated.Length == 0 || source.Length == 0 || target.Length == 0)
+            {
+                _status.Text = "Translate a passage first, then swap languages.";
+                _status.Foreground = Ui.WarnBrush;
+                return;
+            }
+            if (current.TashkeelOnly || !string.IsNullOrEmpty(current.Error))
+            {
+                _status.Text = "Swap is available after a translation.";
+                _status.Foreground = Ui.WarnBrush;
+                return;
+            }
+            if (string.Equals(source, target, StringComparison.OrdinalIgnoreCase))
+            {
+                _status.Text = "The passage is already in the target language.";
+                _status.Foreground = Ui.WarnBrush;
+                return;
+            }
+
+            string original = current.SourceText ?? "";
+
+            // The old source becomes the new target. Auto mode only knows
+            // Arabic and English, so it cannot express the reversed pair.
+            _config.AutoTarget = false;
+            _config.Target = source;
+            _config.Save();
+            UpdateTargetButton();
+
+            _input.Text = translated;
+            UpdatePlaceholder();
+            _input.Focus();
+
+            // Move both texts immediately, exactly as the two boxes would
+            // swap. The real reversed translation replaces this result when
+            // the network call lands.
+            TranslationResult swapped = new TranslationResult();
+            swapped.SourceText = translated;
+            swapped.Translation = original;
+            swapped.Detected = target;
+            swapped.Target = source;
+            swapped.AutoTarget = false;
+            swapped.MaxChars = _config.MaxChars;
+            _currentResult = swapped;
+            _lastTranslation = original;
+            ShowResult(swapped);
+            _status.Text = "Swapped to " + target.ToUpperInvariant() + " \u2192 " + source.ToUpperInvariant() + ".";
+            _status.Foreground = Ui.Muted;
+
+            Translate();
+        }
+
         private void UpdateTargetButton()
         {
             string label;
@@ -842,20 +970,68 @@ namespace Qalam
             }
         }
 
+        private void ResetResult()
+        {
+            // Cancel any translation, grammar, or transcription still in flight
+            // so a late response cannot put the old output back on screen.
+            _requestId++;
+            _busy = false;
+            if (_translateButton != null) _translateButton.IsEnabled = true;
+
+            _currentResult = null;
+            _lastTranslation = "";
+            _sourceSpeechText = "";
+            _sourceSpeechLang = "";
+            _translationSpeechText = "";
+            _translationSpeechLang = "";
+            _transcriptionKind = "";
+            _transcriptionSpeech = "";
+            _transcriptionSpeechLang = "";
+
+            if (_translation != null) _translation.Text = "";
+            if (_sourceText != null) _sourceText.Text = "";
+            if (_langPair != null) _langPair.Text = "";
+            if (_tashkeelText != null) _tashkeelText.Text = "";
+            if (_grammarText != null) _grammarText.Text = "";
+            if (_wordingText != null) _wordingText.Text = "";
+            if (_copyButton != null) _copyButton.IsEnabled = false;
+            if (_sourceListenButton != null) _sourceListenButton.IsEnabled = false;
+            if (_translationListenButton != null) _translationListenButton.IsEnabled = false;
+
+            if (_resultCard != null) _resultCard.Visibility = Visibility.Collapsed;
+            if (_tashkeelCard != null) _tashkeelCard.Visibility = Visibility.Collapsed;
+            if (_grammarCard != null) _grammarCard.Visibility = Visibility.Collapsed;
+            if (_wordingCard != null) _wordingCard.Visibility = Visibility.Collapsed;
+            if (_status != null)
+            {
+                _status.Text = "";
+                _status.Foreground = Ui.Muted;
+            }
+            ListenControl.ResetAll();
+        }
+
         private void ShowResult(TranslationResult result)
         {
+            ListenControl.ResetAll();
             _resultCard.Visibility = Visibility.Visible;
-            _translation.Text = result.Translation ?? "";
             _sourceText.Text = result.SourceText ?? "";
             _langPair.Text = (string.IsNullOrEmpty(result.Detected) ? "?" : result.Detected.ToUpperInvariant())
-                + "  \u2192  " + (result.Target == null ? "?" : result.Target.ToUpperInvariant());
+                + "  →  " + (result.Target == null ? "?" : result.Target.ToUpperInvariant());
             bool rtl = IsRtl(result.Target);
             _translation.FlowDirection = rtl ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
             _translation.TextAlignment = rtl ? TextAlignment.Right : TextAlignment.Left;
             _translation.FontFamily = rtl ? new FontFamily("Segoe UI") : new FontFamily("Segoe UI");
             _copyButton.IsEnabled = !string.IsNullOrEmpty(result.Translation);
-        }
 
+            _sourceSpeechText = result.SourceText ?? "";
+            _sourceSpeechLang = SpeechLanguage.Resolve(_sourceSpeechText, result.Detected);
+            if (_sourceListenButton != null) _sourceListenButton.IsEnabled = !string.IsNullOrEmpty(_sourceSpeechText) && !string.IsNullOrEmpty(_sourceSpeechLang);
+
+            _translationSpeechText = result.Translation ?? "";
+            _translationSpeechLang = SpeechLanguage.Resolve(_translationSpeechText, result.Target);
+            SpokenText.Render(_translation, _translationSpeechText, _translationSpeechLang);
+            if (_translationListenButton != null) _translationListenButton.IsEnabled = !string.IsNullOrEmpty(_translationSpeechText) && !string.IsNullOrEmpty(_translationSpeechLang);
+        }
         private void ShowCachedGrammar(string text, int request)
         {
             if (!IsSingleWord(text)) return;
@@ -1083,6 +1259,24 @@ namespace Qalam
             catch
             {
                 return null;
+            }
+        }
+
+        private async void SpeakMain(string text, string language)
+        {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(language)) return;
+            try
+            {
+                _status.Text = "Loading audio…";
+                _status.Foreground = Ui.Muted;
+                await SpeechService.SpeakAsync(text, language);
+                _status.Text = "";
+            }
+            catch (Exception ex)
+            {
+                Logger.Write("main tts: " + ex.Message);
+                _status.Text = "Audio unavailable.";
+                _status.Foreground = Ui.WarnBrush;
             }
         }
     }

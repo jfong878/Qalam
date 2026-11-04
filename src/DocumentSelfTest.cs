@@ -2,6 +2,7 @@
 // separate from the popup selftest so failing network calls do not affect it.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -36,13 +37,28 @@ namespace Qalam
                 log.AppendLine("source=" + source);
                 log.AppendLine("target=" + target);
 
+                // A headless stand-in for the review dialog: it proves edits
+                // survive into the written document without needing a UI.
+                string reviewMarker = Arg(args, "--review-marker");
+                Func<IList<DocumentSegment>, bool> review = null;
+                if (!string.IsNullOrEmpty(reviewMarker))
+                {
+                    log.AppendLine("review_marker=" + reviewMarker);
+                    review = delegate(IList<DocumentSegment> segments)
+                    {
+                        foreach (DocumentSegment segment in segments)
+                            segment.Translation = (segment.Translation ?? "").TrimEnd() + " " + reviewMarker;
+                        return true;
+                    };
+                }
+
                 Stopwatch watch = Stopwatch.StartNew();
                 InlineProgress progress = new InlineProgress(delegate(DocumentProgress p)
                 {
                     log.AppendLine("progress=" + p.Percent + "% " + p.Detail);
                 });
                 DocumentTranslationReport report = service.TranslateAsync(
-                    input, output, target, source, progress, CancellationToken.None).GetAwaiter().GetResult();
+                    input, output, target, source, progress, CancellationToken.None, review).GetAwaiter().GetResult();
                 watch.Stop();
                 log.AppendLine("translated=" + report.Translated);
                 log.AppendLine("units=" + report.Units);

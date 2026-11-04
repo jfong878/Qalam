@@ -777,7 +777,7 @@ namespace Qalam
                 if (c >= 0xAC00 && c <= 0xD7AF) hasHangul = true;
             }
 
-            if (hasHan && hasKana) return "ja";
+            if (hasKana) return "ja";
             if (hasHangul) return "ko";
             if (hasHan) return "zh";
             if (hasArabic) return hasUrdu ? "ur" : (hasPersian ? "fa" : "ar");
@@ -788,22 +788,36 @@ namespace Qalam
             if (hasThai) return "th";
 
             List<ColloquialToken> tokens = Tokenize(text);
+            int frenchHints = 0;
+            int spanishHints = 0;
+            foreach (char letter in text.ToLowerInvariant())
+            {
+                if ("çœæàèùêâîôûëïÿ".IndexOf(letter) >= 0) frenchHints++;
+                else if (letter == 'ñ' || letter == '¿' || letter == '¡') spanishHints++;
+            }
+
             string bestCode = null;
             int bestScore = 0;
             foreach (KeyValuePair<string, HashSet<string>> language in LatinStopwords)
             {
-                int score = 0;
+                int hits = 0;
                 foreach (ColloquialToken token in tokens)
                 {
-                    if (token.IsWord && language.Value.Contains(token.Folded)) score++;
+                    if (token.IsWord && language.Value.Contains(token.Folded)) hits++;
                 }
+                int score = hits * 3;
+                if (language.Key == "fr") score += frenchHints * 2;
+                else if (language.Key == "es") score += spanishHints * 3;
                 if (score > bestScore)
                 {
                     bestScore = score;
                     bestCode = language.Key;
                 }
             }
-            return bestScore > 0 ? bestCode : null;
+            if (bestScore > 0) return bestCode;
+            if (frenchHints > 0) return "fr";
+            if (spanishHints > 0) return "es";
+            return null;
         }
 
         public static string LanguageName(string code)
@@ -2197,18 +2211,41 @@ namespace Qalam
         private static Dictionary<string, HashSet<string>> BuildStopwords()
         {
             Dictionary<string, HashSet<string>> map = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
-            map["es"] = Set("el la los las de del que y en un una es son no con para por se su al como mas pero esto esta este muy ya hay me te lo le les nos calla mames chingada guey cabron pendejo chido chingon verga pinche madre joder mierda coño hostia follar puta");
+            map["es"] = Set("el la los las de del que y en un una es son no con para por se su al como mas más pero esto esta este muy ya hay me te lo le les nos nosotros vosotros ellos ellas yo tú él ella ser estar hacer hecho dice puede debe cuando donde porque desde durante antes después todavía siempre nunca nada nadie cada cual cuales nuestro vuestro también tampoco sino entre sobre bajo hacia hasta sin qué quién cómo cuándo dónde cuál");
             map["en"] = Set("the and is are was were to of in that it you i don't dont fuck shit bitch ass damn hello this with for have not no yes what movie she he they we");
-            map["fr"] = Set("le la les des est et pas que qui dans pour avec je tu il elle putain merde un une du");
-            map["de"] = Set("der die das und ist nicht ein eine mit fur für auf ich du er sie scheisse verdammt");
-            map["pt"] = Set("o a os as de que e em um uma nao não com para por voce você merda porra");
-            map["it"] = Set("il la gli le di che e in un una non con per sono cazzo merda");
+            map["fr"] = Set("le la les des est et pas que qui dans pour avec je tu il elle putain merde un une du de en ce cette ces cet sur au aux mon ma mes ton ta tes son sa ses notre votre leur nous vous ils elles on mais ou où donc or ni car très tout tous toute bien aussi plus moins sans sous entre vers chez être avoir faire fait dit peut doit comme quand comment pourquoi parce depuis pendant avant après encore toujours jamais rien personne chaque quel quelle quels quelles lui moi toi soi y ne si oui non dont");
+            map["de"] = Set("der die das und ist nicht ein eine mit fur für auf ich du er sie scheisse verdammt wie geht es dir mir dich sich haben sind war werden kann muss soll will auch aber oder noch nur schon sehr mehr wenn weil dass dieser diese dieses mein dein sein ihre unser euer kein keine zum zur vom beim im am an dem den des");
+            map["pt"] = Set("o a os as de que e em um uma nao não com para por voce você merda porra como está bom dia boa noite obrigado obrigada vocês nós eles elas isso isto aqui ali sim mas ou quando onde porque muito bem também pelo pela dos das nos nas");
+            map["it"] = Set("il la gli le di che e in un una non con per sono cazzo merda come stai sei buongiorno buonasera grazie prego ciao io tu lui lei noi voi loro questo questa quello quella del della nel nella al alla è");
             map["nl"] = Set("de het een en is niet van in op ik je dat kut shit");
             map["pl"] = Set("i w na z do nie jest to sie się kurwa chuj");
             map["tr"] = Set("bir ve bu da de icin için degil değil amk sik");
             map["id"] = Set("yang dan di ke dari ini itu tidak aku kamu anjing kontol");
             map["vi"] = Set("va và la là cua của khong không toi tôi ban bạn dit địt");
             map["ro"] = Set("si și este nu cu de la in în dracului");
+            map["ca"] = Set("el la els les de del que i en un una és són no amb per seu al com més però aquest aquesta molt ja hi em et ho li ens");
+            map["gl"] = Set("o a os as de do da que e en un unha é son non con por se seu ao como mais pero este esta moi xa hai me te lle nos");
+            map["sv"] = Set("och att det en ett är inte som på för med av den de har jag du han hon vi ni sig till från om men eller så kan ska");
+            map["da"] = Set("og at det en et er ikke som på for med af den de har jeg du han hun vi sig til fra om men eller så kan skal");
+            map["no"] = Set("og at det en et er ikke som på for med av den de har jeg du han hun vi dere seg til fra om men eller så kan skal");
+            map["fi"] = Set("ja on ei se että hän me te he ovat oli mutta tai kun niin kuin myös vain jo nyt minä sinä");
+            map["hu"] = Set("a az egy és nem hogy van volt lesz meg de vagy ha már még csak mint ki mi ez azt");
+            map["cs"] = Set("a je se na v že to s z do o k i jako ale nebo když už jen tak aby byl byla");
+            map["sk"] = Set("a je sa na v že to s z do o k aj ako alebo keď už len tak aby bol bola");
+            map["hr"] = Set("je i u se na da su za od s kao ali ili ako kada već samo tako biti bio bila");
+            map["sr"] = Set("je i u se na da su za od sa kao ali ili ako kada već samo tako biti bio bila");
+            map["bs"] = Set("je i u se na da su za od s kao ali ili ako kada već samo tako biti bio bila");
+            map["sl"] = Set("je in v se na da so za od s kot ali če že samo tako biti bil bila");
+            map["et"] = Set("ja on ei see et mis ma ei aga või kui juba ainult nii olema oli");
+            map["lt"] = Set("ir yra ne kad į iš su bet arba kaip jau tik taip būti buvo");
+            map["lv"] = Set("un ir ne uz no ar bet vai kā jau tikai tā būt bija");
+            map["is"] = Set("og er ekki sem á fyrir með af það hann hún við þið þeir til frá um en eða svo");
+            map["af"] = Set("die en is nie van in op ek jy hy sy ons julle hulle dit wat met vir maar of");
+            map["sw"] = Set("na ya ni kwa katika kuwa hii hiyo yeye sisi nyinyi wao lakini au kama");
+            map["tl"] = Set("ang ng sa mga ay at hindi ito iyon siya kami tayo kayo sila pero o kung");
+            map["ms"] = Set("yang dan di ke dari ini itu tidak aku kamu dia kami kita mereka tetapi atau");
+            map["eo"] = Set("la kaj estas ne en de al mi vi li ŝi ni ili sed aŭ ke kiel");
+            map["la"] = Set("et in est non ad de cum quod qui quae sed aut ut si");
             return map;
         }
 

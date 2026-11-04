@@ -77,11 +77,11 @@
   "lang": "ja",
   "v2024_pairs": 1908317,
   "v2024_url": "https://object.pouta.csc.fi/OPUS-OpenSubtitles/v2024/tmx/en-ja.tmx.gz",
-  "sampled": 552628,
-  "accept_qalam": 0.4617156568252061,
-  "accept_aware": 0.8317131958568874,
-  "colloquial_rate": 0.004917019850835893,
-  "est_colloquial_pairs": 7804
+  "sampled": 332434,
+  "accept_qalam": 0.46502764458509055,
+  "accept_aware": 0.9248362080894252,
+  "colloquial_rate": 0.005493629796355144,
+  "est_colloquial_pairs": 9695
  },
  {
   "lang": "ko",
@@ -187,9 +187,9 @@
   "v2024_url": "https://object.pouta.csc.fi/OPUS-OpenSubtitles/v2024/tmx/en-zh_CN.tmx.gz",
   "sampled": 319783,
   "accept_qalam": 0.4347823367721236,
-  "accept_aware": 0.8258913075429275,
-  "colloquial_rate": 0.0030934549006838164,
-  "est_colloquial_pairs": 50149
+  "accept_aware": 0.9606545688795214,
+  "colloquial_rate": 0.0028450428221262303,
+  "est_colloquial_pairs": 53648
  },
  {
   "lang": "zh_TW",
@@ -197,9 +197,9 @@
   "v2024_url": "https://object.pouta.csc.fi/OPUS-OpenSubtitles/v2024/tmx/en-zh_TW.tmx.gz",
   "sampled": 317584,
   "accept_qalam": 0.4198794649604514,
-  "accept_aware": 0.8103053050531512,
-  "colloquial_rate": 0.0032758218698997433,
-  "est_colloquial_pairs": 43242
+  "accept_aware": 0.9543868708751071,
+  "colloquial_rate": 0.003008927805528245,
+  "est_colloquial_pairs": 46781
  },
  {
   "lang": "pt_BR",
