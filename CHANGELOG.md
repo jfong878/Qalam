@@ -52,6 +52,10 @@ The Transliteration line now follows the pronunciation register you chose, so a 
 
 Unvocalized input is read by context: a bare ان with no shadda is the conditional In, not anna, so ان شاء الله بعد بخلص من الشغل اليوم becomes In Shaa' Allaah ba'd bakhalliṣ min ash-Shughl il-Yawm. Formulae such as In Shaa' Allaah, Bismillaah, Al-Ḥamdu lillaah, As-Salaamu 'alaykum, Maa Shaa' Allaah, Subḥaan Allaah, Allaahu Akbar and Laa ilaaha illaa Allaah keep their Fuṣḥā shape in every register; a preposition keeps the plain article after it (min ash-shughul) while the genitive i still carries onto a following article (ash-Shughl il-Yawm).
 
+## 1.0.34 — 2026-11-07
+
+Running `uninstall.ps1` directly now removes the desktop shortcut, the Add/Remove Programs entry, and `HKCU\Software\Qalam`, so a manual uninstall no longer leaves links or a registration behind. `-KeepFiles` still removes those shortcuts and the registration while keeping settings and logs.
+
 ## 1.0.32 — 2026-11-04
 
 The compact pop-up now has a View in App action that opens the completed source and translation in the main window without re-running the translation or adding a duplicate history entry. Formal Arabic that happens to contain a dialect word such as طيب is no longer sent to the local slang model, and the normal translation endpoint is now the primary online path; the reported passage now keeps the righteous man and honoring his parents instead of Saleh and from his parents.

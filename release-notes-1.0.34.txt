@@ -1,0 +1,4 @@
+Qalam 1.0.34
+
+- Running `uninstall.ps1` directly now removes the desktop shortcut, the Add/Remove Programs entry, and `HKCU\Software\Qalam`, so a manual uninstall no longer leaves links or a registration behind.
+- `-KeepFiles` still removes those shortcuts and the registration while keeping settings and logs.

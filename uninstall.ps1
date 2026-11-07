@@ -12,7 +12,8 @@ Get-Process -Name Qalam -ErrorAction SilentlyContinue | Stop-Process -Force
 
 $startupShortcut = Join-Path ([Environment]::GetFolderPath('Startup')) 'Qalam.lnk'
 $programsShortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Qalam.lnk'
-foreach ($shortcut in @($startupShortcut, $programsShortcut)) {
+$desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Qalam.lnk'
+foreach ($shortcut in @($startupShortcut, $programsShortcut, $desktopShortcut)) {
     if (Test-Path -LiteralPath $shortcut) {
         Remove-Item -LiteralPath $shortcut -Force
         Write-Host "Removed $shortcut"
@@ -46,6 +47,17 @@ if ($KeepFiles) {
 } elseif (Test-Path -LiteralPath $dest) {
     Remove-Item -LiteralPath $dest -Recurse -Force
     Write-Host "Removed $dest"
+}
+
+# The Setup's uninstaller also deletes these; a direct run must leave the same state.
+foreach ($key in @(
+    'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Qalam',
+    'HKCU:\Software\Qalam'
+)) {
+    if (Test-Path -LiteralPath $key) {
+        Remove-Item -LiteralPath $key -Recurse -Force
+        Write-Host "Removed registry key $key"
+    }
 }
 
 Write-Host 'Qalam uninstalled. Reverso itself was not modified or removed.'

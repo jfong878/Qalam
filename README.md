@@ -754,7 +754,8 @@ headlessly and writes a report next to the output. The fixtures in `selftest/doc
 powershell -NoProfile -ExecutionPolicy Bypass -File uninstall.ps1
 ```
 
-This stops Qalam, removes both shortcuts, restores Reverso's autostart entry if it is
-still absent **and its executable still exists**, and deletes `%LOCALAPPDATA%\Qalam`.
-After Reverso has been uninstalled, no dead startup entry is created. Use `-KeepFiles`
-to keep settings and logs.
+This stops Qalam, removes the Startup, Start Menu, and desktop shortcuts, clears the
+Add/Remove Programs entry and `HKCU\Software\Qalam`, restores Reverso's autostart entry
+if it is still absent **and its executable still exists**, and deletes
+`%LOCALAPPDATA%\Qalam`. After Reverso has been uninstalled, no dead startup entry is
+created. Use `-KeepFiles` to keep settings and logs.
