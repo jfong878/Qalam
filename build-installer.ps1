@@ -2,15 +2,25 @@
 param(
     [string]$Version = "1.0.0",
     [string]$Notes = "",
+    [string]$NotesFile = "",
     [switch]$SkipBuild
 )
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path $root 'release-text.ps1')
 $dist = Join-Path $root 'dist'
 $stage = Join-Path $dist 'package-stage'
 $package = Join-Path $dist 'Qalam-Windows.zip'
 $nsis = $null
+
+if (-not [string]::IsNullOrWhiteSpace($NotesFile)) {
+    if (-not [string]::IsNullOrWhiteSpace($Notes)) {
+        throw 'Pass either -Notes or -NotesFile, not both.'
+    }
+    $Notes = Read-QalamUtf8File -Path $NotesFile -Label 'Release notes'
+}
+Assert-QalamReleaseText -Text $Notes -Label 'Release notes' -AllowEmpty
 
 if (-not $SkipBuild) {
     & (Join-Path $root 'build.ps1')
@@ -118,8 +128,10 @@ $manifest = [ordered]@{
 }
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 [IO.File]::WriteAllText((Join-Path $dist 'latest.json'), ($manifest | ConvertTo-Json), $utf8)
+$null = Assert-QalamManifestNotes -Path (Join-Path $dist 'latest.json') -Expected $Notes -Label 'latest.json'
 $yml = "version: $Version`r`nfiles:`r`n  - url: $leaf`r`n    sha512: $sha512`r`n    size: $($file.Length)`r`npath: $leaf`r`nsha512: $sha512`r`nreleaseDate: '$releaseDate'`r`n"
 [IO.File]::WriteAllText((Join-Path $dist 'latest.yml'), $yml, $utf8)
+$null = Read-QalamUtf8File -Path (Join-Path $dist 'latest.yml') -Label 'latest.yml'
 
 Write-Host "Built $out"
 Write-Host "SHA-256 $sha256"

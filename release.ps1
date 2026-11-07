@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][string]$Version,
-    [Parameter(Mandatory = $true)][string]$Notes,
+    [string]$Notes = '',
+    [string]$NotesFile = '',
     [string]$Repo = 'jfong878/Qalam',
     [switch]$BuildOnly,
     [switch]$PublishOnly,
@@ -15,13 +16,18 @@ $repo = $Repo
 $assemblyPath = Join-Path $root 'src\AssemblyInfo.cs'
 $buildScript = Join-Path $root 'build-installer.ps1'
 $utf8 = New-Object System.Text.UTF8Encoding($false)
+. (Join-Path $root 'release-text.ps1')
 
 if ($BuildOnly -and $PublishOnly) {
     throw 'Choose either -BuildOnly or -PublishOnly, not both.'
 }
-if ([string]::IsNullOrWhiteSpace($Notes)) {
-    throw 'Release notes are required; pass a non-empty -Notes value.'
+if (-not [string]::IsNullOrWhiteSpace($NotesFile)) {
+    if (-not [string]::IsNullOrWhiteSpace($Notes)) {
+        throw 'Pass either -Notes or -NotesFile, not both.'
+    }
+    $Notes = Read-QalamUtf8File -Path $NotesFile -Label 'Release notes'
 }
+Assert-QalamReleaseText -Text $Notes -Label 'Release notes'
 
 $Version = $Version.Trim().TrimStart('v')
 if ($Version -notmatch '^\d+\.\d+\.\d+$') {
@@ -57,13 +63,6 @@ function Get-GhPath {
     return $command.Source
 }
 
-function Get-Manifest {
-    if (-not (Test-Path -LiteralPath $manifestPath)) {
-        throw ('Update manifest is missing: ' + $manifestPath)
-    }
-    return [IO.File]::ReadAllText($manifestPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
-}
-
 function Invoke-FormatSuite {
     $python = Get-Command python.exe -ErrorAction SilentlyContinue
     if (-not $python) { throw 'Python is required for the PDF formatting release gate.' }
@@ -91,7 +90,7 @@ function Assert-BuildArtifacts {
         throw ('Built executable is ' + $built + ', expected ' + $targetVersion + '.')
     }
 
-    $manifest = Get-Manifest
+    $manifest = Assert-QalamManifestNotes -Path $manifestPath -Expected $Notes -Label 'latest.json'
     if ([string]$manifest.version -ne $Version) {
         throw ('latest.json version is ' + $manifest.version + ', expected ' + $Version + '.')
     }
@@ -115,7 +114,7 @@ function Assert-BuildArtifacts {
         throw 'The setup has an invalid size.'
     }
 
-    $yml = [IO.File]::ReadAllText($ymlPath, [Text.Encoding]::UTF8)
+    $yml = Read-QalamUtf8File -Path $ymlPath -Label 'latest.yml'
     if ($yml.IndexOf('version: ' + $Version, [StringComparison]::Ordinal) -lt 0) {
         throw 'latest.yml does not contain the release version.'
     }
@@ -159,9 +158,18 @@ if (-not $PublishOnly) {
     [IO.File]::WriteAllText($assemblyPath, $assembly, $utf8)
     Write-Step ('Set assembly version to ' + $assemblyVersion)
 
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $buildScript -Version $Version -Notes $Notes
-    if ($LASTEXITCODE -ne 0) {
-        throw ('Installer build failed with exit code ' + $LASTEXITCODE + '.')
+    # Pass Unicode notes through a strict UTF-8 file rather than a child-process
+    # command line, which can be re-encoded by a legacy console code page.
+    $buildNotesPath = Join-Path ([IO.Path]::GetTempPath()) ('qalam-build-notes-' + [Guid]::NewGuid().ToString('N') + '.txt')
+    [IO.File]::WriteAllText($buildNotesPath, $Notes, $utf8)
+    try {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $buildScript -Version $Version -NotesFile $buildNotesPath
+        if ($LASTEXITCODE -ne 0) {
+            throw ('Installer build failed with exit code ' + $LASTEXITCODE + '.')
+        }
+    }
+    finally {
+        Remove-Item -LiteralPath $buildNotesPath -Force -ErrorAction SilentlyContinue
     }
 }
 else {
@@ -184,7 +192,7 @@ Invoke-FormatSuite
 
 if ($BuildOnly) {
     Write-Host ''
-    Write-Host ('Build only. Publish with: .\release.ps1 -Version ' + $Version + ' -Notes "..." -PublishOnly')
+    Write-Host ('Build only. Publish with: .\release.ps1 -Version ' + $Version + ' -NotesFile notes.txt -PublishOnly')
     return
 }
 
@@ -228,6 +236,10 @@ $temp = Join-Path ([IO.Path]::GetTempPath()) ('qalam-release-' + [Guid]::NewGuid
 New-Item -ItemType Directory -Force -Path $temp | Out-Null
 $notesPath = Join-Path $temp 'notes.txt'
 [IO.File]::WriteAllText($notesPath, $Notes, $utf8)
+$writtenNotes = Read-QalamUtf8File -Path $notesPath -Label 'Release notes file'
+if ((Get-QalamComparableText $writtenNotes) -cne (Get-QalamComparableText $Notes)) {
+    throw 'The release notes file did not preserve the supplied notes; refusing to publish.'
+}
 
 $releasesRaw = & $gh api ('repos/' + $repo + '/releases?per_page=100') 2>$null
 if ($LASTEXITCODE -ne 0) { throw 'Cannot list releases; refusing to publish.' }
@@ -255,6 +267,11 @@ if ($LASTEXITCODE -ne 0) { throw 'Cannot verify the draft release after upload.'
 $draft = @((($draftRaw -join "`n") | ConvertFrom-Json) | Where-Object { $_.tag_name -eq $tag }) | Select-Object -First 1
 if ($null -eq $draft) { throw 'Draft release was not found after creation.' }
 if (-not [bool]$draft.draft) { throw 'Expected a draft release before publishing.' }
+$draftNotes = [string]$draft.body
+Assert-QalamReleaseText -Text $draftNotes -Label 'Draft release notes'
+if ((Get-QalamComparableText $draftNotes) -cne (Get-QalamComparableText $Notes)) {
+    throw 'Draft release notes do not match the supplied notes; refusing to publish.'
+}
 
 $expected = @{
     (Split-Path -Leaf $setupPath) = $verified.Sha256
@@ -295,6 +312,11 @@ $patch = [ordered]@{
 }
 $patchPath = Join-Path $temp 'release-patch.json'
 [IO.File]::WriteAllText($patchPath, ($patch | ConvertTo-Json -Compress), $utf8)
+$patchText = Read-QalamUtf8File -Path $patchPath -Label 'Release patch'
+$patchCheck = $patchText | ConvertFrom-Json
+if ((Get-QalamComparableText ([string]$patchCheck.body)) -cne (Get-QalamComparableText $Notes)) {
+    throw 'Release patch notes do not match the supplied notes; refusing to publish.'
+}
 $publishedRaw = & $gh api --method PATCH ('repos/' + $repo + '/releases/' + $draft.id) --input $patchPath 2>$null
 if ($LASTEXITCODE -ne 0) { throw 'Publishing the release failed.' }
 $published = ($publishedRaw -join "`n") | ConvertFrom-Json

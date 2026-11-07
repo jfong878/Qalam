@@ -111,7 +111,20 @@ verify their hashes:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File release.ps1 `
   -Version 1.0.1 `
-  -Notes "What changed in this release."
+  -NotesFile .\release-notes.txt
+```
+
+For Arabic, Chinese, accents, emoji, or any other non-ASCII notes, save the
+text as UTF-8 and pass `-NotesFile`. Windows PowerShell can re-encode `-Notes`
+on the command line before Qalam sees it. `-Notes` remains available for plain
+ASCII notes. The release script rejects replacement characters, mojibake,
+invalid UTF-8, and update manifests or draft bodies whose notes do not match the
+supplied notes.
+
+The release-note guard has a standalone self-test:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\selftest\release-text-check.ps1
 ```
 
 The release script also runs the 13-block, 15-language PDF formatting suite
@@ -126,9 +139,9 @@ python selftest/format_suite.py --exe dist/Qalam.exe
 Use `-BuildOnly` to prepare and inspect a build without publishing. If the
 publish step is interrupted after the draft is created, rerun with
 `-PublishOnly -Resume` using the same version; the incomplete draft is replaced
-and rebuilt before publishing. `-Notes` is required. The build phase refuses to
-reuse or lower the current assembly version; `-PublishOnly` requires artifacts
-already built at the requested version.
+and rebuilt before publishing. Release notes are required through `-Notes` or `-NotesFile`. The build phase
+refuses to reuse or lower the current assembly version; `-PublishOnly` requires
+artifacts already built at the requested version.
 
 ## Updates
 
