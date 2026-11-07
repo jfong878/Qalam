@@ -695,9 +695,14 @@ def transliterate(text):
     return result
 
 
+PROTOCOL_OUT = None
+
+
 def respond(payload):
-    sys.stdout.write(json.dumps(payload, ensure_ascii=False) + "\n")
-    sys.stdout.flush()
+    # Third-party libraries must never share stdout with the JSON protocol.
+    target = PROTOCOL_OUT if PROTOCOL_OUT is not None else sys.stdout
+    target.write(json.dumps(payload, ensure_ascii=False) + "\n")
+    target.flush()
 
 
 def to_pinyin(text, lazy_pinyin, style):
@@ -717,13 +722,22 @@ def to_pinyin(text, lazy_pinyin, style):
 
 
 def main():
+    global PROTOCOL_OUT
+
     # The C# side launches Python with PYTHONIOENCODING/PYTHONUTF8 and writes
     # UTF-8 bytes; reconfigure is a belt-and-braces guard for older launches.
     try:
         sys.stdin.reconfigure(encoding="utf-8")
         sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
     except Exception:
         pass
+
+    # Keep import warnings and any library prints off stdout. A stray line there
+    # desynchronizes the JSON-lines protocol and makes the next real response
+    # look like a stale or invalid reply.
+    PROTOCOL_OUT = sys.stdout
+    sys.stdout = sys.stderr
 
     # Both engines are optional at startup: a missing package disables only its
     # own command, so a Pinyin request still works when Mishkal is absent.

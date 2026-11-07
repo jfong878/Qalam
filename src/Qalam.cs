@@ -66,6 +66,9 @@ namespace Qalam
             if (args.Any(a => string.Equals(a, "--selftest", StringComparison.OrdinalIgnoreCase)))
                 return SelfTest.Run(args);
 
+            if (args.Any(a => string.Equals(a, "--tashkeeltest", StringComparison.OrdinalIgnoreCase)))
+                return TashkeelSelfTest.Run(args);
+
             if (args.Any(a => string.Equals(a, "--charactertest", StringComparison.OrdinalIgnoreCase)))
             {
                 string output = Path.Combine(Paths.AppDir, "charactertest.txt");
@@ -1644,6 +1647,9 @@ namespace Qalam
         private static string _activeLanguage = "";
         private static bool _paused;
         private static bool _finished = true;
+        private static bool _playRequested;
+        private static bool _prepared;
+        private static int _prepareId;
         private static double _pendingSeek = -1;
         private static int _seekId;
 
@@ -1665,9 +1671,12 @@ namespace Qalam
         public static void Stop()
         {
             _generation++;
+            _prepareId++;
             try { if (_player != null) _player.Stop(); } catch { }
             _paused = false;
             _finished = true;
+            _playRequested = false;
+            _prepared = false;
             _activeText = "";
             _activeLanguage = "";
             _chunkIndex = 0;
@@ -1678,6 +1687,7 @@ namespace Qalam
 
         public static void Pause()
         {
+            _playRequested = false;
             if (_player == null || _paused || _finished) return;
             try { _player.Pause(); _paused = true; } catch { }
         }
@@ -1691,13 +1701,37 @@ namespace Qalam
         {
             if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(language)) return;
             language = SpeechLanguage.Normalize(language) ?? language;
+            double rate = speed > 0 ? speed : 1.0;
+            _prepareId++;
+
+            // A result is opened quietly as soon as it appears. Reusing that
+            // already-open source avoids MediaPlayer's roughly 0.8 second local
+            // open cost when the Listen button is pressed.
+            if (_prepared && _player != null && Matches(text, language))
+            {
+                _prepared = false;
+                _playRequested = true;
+                _paused = false;
+                _finished = false;
+                _speed = rate;
+                int preparedGeneration = ++_generation;
+                _seekId++;
+                _pendingSeek = 0;
+                try { _player.Position = TimeSpan.Zero; } catch { }
+                ApplySpeed();
+                _player.Play();
+                if (_chunks != null && _chunks.Count > 0)
+                    _prefetch = PrefetchAsync(preparedGeneration, _chunkKey, _chunks, language);
+                return;
+            }
 
             if (!restart && _player != null && !_finished && Matches(text, language))
             {
-                _speed = speed > 0 ? speed : 1.0;
+                _playRequested = true;
+                _paused = false;
+                _speed = rate;
                 ApplySpeed();
                 _player.Play();
-                _paused = false;
                 return;
             }
 
@@ -1706,12 +1740,18 @@ namespace Qalam
             _pendingSeek = -1;
             _finished = true;
             _paused = false;
+            _playRequested = true;
+            _prepared = false;
             _activeText = text;
             _activeLanguage = language;
-            _speed = speed > 0 ? speed : 1.0;
+            _speed = rate;
             try { if (_player != null) _player.Stop(); } catch { }
 
-            string spoken = PrepareSpoken(text, language);
+            // Dialect vocalization is a synchronous worker round trip. Keep it
+            // off the UI thread so the button and window stay responsive while
+            // the first audio chunk is prepared.
+            string spoken = await Task.Run(delegate { return PrepareSpoken(text, language); });
+            if (generation != _generation || !_playRequested) return;
             if (string.IsNullOrWhiteSpace(spoken)) return;
             List<string> chunks = Chunk(spoken, 180, 6000);
             if (chunks.Count == 0) return;
@@ -1724,7 +1764,7 @@ namespace Qalam
             EnsurePlayer();
 
             string first = await GetChunkFileAsync(key, chunks[0], language, 0, chunks.Count).ConfigureAwait(true);
-            if (generation != _generation) return;
+            if (generation != _generation || !_playRequested) return;
 
             OpenChunk(first);
             _prefetch = PrefetchAsync(generation, key, chunks, language);
@@ -1736,7 +1776,7 @@ namespace Qalam
             _player = new MediaPlayer();
             _player.MediaFailed += delegate(object sender, ExceptionEventArgs e)
             {
-                Logger.Write("tts playback: " + e.ErrorException.Message);
+                PlaybackFailed(e.ErrorException);
             };
             _player.MediaEnded += delegate { AdvanceChunk(); };
             _player.MediaOpened += delegate
@@ -1753,7 +1793,9 @@ namespace Qalam
                 catch { }
                 _pendingSeek = -1;
                 try { _player.SpeedRatio = _speed; } catch { }
-                _player.Play();
+                // An open is asynchronous. If Pause was pressed before the
+                // media became ready, opening must not start it anyway.
+                if (_playRequested) _player.Play();
             };
         }
 
@@ -1764,30 +1806,103 @@ namespace Qalam
 
         private static void OpenChunk(string file, double fraction)
         {
-            _pendingSeek = fraction;
-            _player.Open(new Uri(file));
-            if (fraction < 0)
+            try
             {
-                try { _player.SpeedRatio = _speed; } catch { }
-                _player.Play();
+                _pendingSeek = fraction;
+                _player.Open(new Uri(file));
+                if (fraction < 0)
+                {
+                    try { _player.SpeedRatio = _speed; } catch { }
+                    if (_playRequested) _player.Play();
+                }
+                _paused = !_playRequested;
+                _finished = false;
             }
-            _paused = false;
-            _finished = false;
+            catch (Exception ex)
+            {
+                PlaybackFailed(ex);
+            }
         }
 
-        // MediaPlayer only applies a new SpeedRatio at a seek. Without this
-        // nudge the old rate keeps playing until the buffered audio drains,
-        // which is what made the Slow button feel late.
+        // WPF applies SpeedRatio to the active media immediately here. The old
+        // 40 ms backward seek made the button feel late and repeated a syllable.
         private static void ApplySpeed()
         {
             if (_player == null) return;
-            try { _player.SpeedRatio = _speed; } catch { return; }
-            try
+            try { _player.SpeedRatio = _speed; } catch { }
+        }
+
+        // Open the first chunk while the result is still being read. This does
+        // not play anything; it only removes the media-open and network stall
+        // from the first Listen click. A missing/failed prewarm is harmless.
+        public static void Prewarm(string text, string language)
+        {
+            if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(language)) return;
+            language = SpeechLanguage.Normalize(language) ?? language;
+            if (!_finished) return;
+
+            // A dialect request competes with the visible Tashkeel card for the
+            // same worker. Let that card finish first; the Listen click still
+            // works, just without the speculative open.
+            if (Pronunciation.IsArabic(language) &&
+                Pronunciation.NeedsDialectVocalization(Pronunciation.Current)) return;
+
+            int prepare = ++_prepareId;
+            string key = CacheKey(text, language);
+            Task.Run(async delegate
             {
-                TimeSpan position = _player.Position - TimeSpan.FromMilliseconds(40);
-                _player.Position = position > TimeSpan.Zero ? position : TimeSpan.Zero;
-            }
-            catch { }
+                try
+                {
+                    string spoken = PrepareSpoken(text, language);
+                    if (prepare != _prepareId || string.IsNullOrWhiteSpace(spoken)) return;
+                    List<string> chunks = Chunk(spoken, 180, 6000);
+                    if (chunks.Count == 0) return;
+                    string first = await GetChunkFileAsync(key, chunks[0], language, 0, chunks.Count)
+                        .ConfigureAwait(false);
+                    if (prepare != _prepareId) return;
+
+                    Application app = Application.Current;
+                    if (app == null) return;
+                    DispatcherOperation ignored = app.Dispatcher.BeginInvoke(new Action(delegate
+                    {
+                        if (prepare != _prepareId || !_finished) return;
+                        _activeText = text;
+                        _activeLanguage = language;
+                        _speed = 1.0;
+                        _paused = true;
+                        _playRequested = false;
+                        _prepared = true;
+                        _finished = false;
+                        _chunks = chunks;
+                        _chunkIndex = 0;
+                        _chunkKey = key;
+                        _chunkLanguage = language;
+                        _seekId++;
+                        _pendingSeek = -1;
+                        EnsurePlayer();
+                        OpenChunk(first);
+                    }));
+                }
+                catch (Exception ex)
+                {
+                    if (prepare == _prepareId) Logger.Write("tts prewarm: " + ex.Message);
+                }
+            });
+        }
+
+        private static void PlaybackFailed(Exception error)
+        {
+            string message = error == null ? "unknown error" : error.Message;
+            Logger.Write("tts playback: " + message);
+            _playRequested = false;
+            _paused = false;
+            _prepared = false;
+            _finished = true;
+            Action notify = new Action(ListenControl.NotifyEnded);
+            if (Application.Current != null)
+                Application.Current.Dispatcher.BeginInvoke(notify);
+            else
+                notify();
         }
 
         // Start (or continue) the current passage at a clicked word. The word
@@ -1802,6 +1917,8 @@ namespace Qalam
                 language = SpeechLanguage.Normalize(language) ?? language;
                 if (wordIndex < 0) wordIndex = 0;
                 if (wordCount > 0 && wordIndex >= wordCount) wordIndex = wordCount - 1;
+                _prepareId++;
+                _prepared = false;
 
                 bool same = Matches(text, language) && _player != null;
                 int generation;
@@ -1812,7 +1929,8 @@ namespace Qalam
                 if (same)
                 {
                     generation = _generation;
-                    spoken = PrepareSpoken(text, language);
+                    spoken = await Task.Run(delegate { return PrepareSpoken(text, language); });
+                    if (seekId != _seekId || generation != _generation) return;
                     chunks = _chunks;
                     key = _chunkKey;
                     if (chunks == null || chunks.Count == 0) return;
@@ -1824,11 +1942,13 @@ namespace Qalam
                     _paused = false;
                     _pendingSeek = -1;
                     _speed = 1.0;
+                    _playRequested = true;
                     _activeText = text;
                     _activeLanguage = language;
                     try { if (_player != null) _player.Stop(); } catch { }
 
-                    spoken = PrepareSpoken(text, language);
+                    spoken = await Task.Run(delegate { return PrepareSpoken(text, language); });
+                    if (seekId != _seekId || generation != _generation) return;
                     chunks = Chunk(spoken, 180, 6000);
                     if (chunks.Count == 0) return;
                     key = CacheKey(text, language);
@@ -1845,6 +1965,7 @@ namespace Qalam
 
                 if (same && target == _chunkIndex && _player.NaturalDuration.HasTimeSpan)
                 {
+                    _playRequested = true;
                     _player.Position = TimeSpan.FromTicks(
                         (long)(_player.NaturalDuration.TimeSpan.Ticks * fraction));
                     ApplySpeed();
@@ -2106,6 +2227,12 @@ namespace Qalam
         }
     }
 
+    internal sealed class TashkeelWorkerException : Exception
+    {
+        public TashkeelWorkerException(string message) : base(message) { }
+        public TashkeelWorkerException(string message, Exception inner) : base(message, inner) { }
+    }
+
     internal sealed class TashkeelClient : IDisposable
     {
         private readonly object _gate = new object();
@@ -2115,25 +2242,27 @@ namespace Qalam
         private StreamWriter _stdin;
         private StreamReader _stdout;
         private int _nextId;
+        private int _restarts;
 
         public string PythonPath { get { return _python; } }
+        internal int Restarts { get { return _restarts; } }
 
         public TashkeelClient(Config config)
+            : this(Paths.ResolvePython(config.PythonPath), Paths.ScriptPath)
         {
-            _python = Paths.ResolvePython(config.PythonPath);
-            _script = Paths.ScriptPath;
+        }
+
+        // The explicit paths keep protocol recovery testable without touching
+        // the installed worker or its virtual environment.
+        internal TashkeelClient(string python, string script)
+        {
+            _python = python;
+            _script = script;
         }
 
         public void Ping()
         {
-            lock (_gate)
-            {
-                Dictionary<string, object> request = new Dictionary<string, object>();
-                request["id"] = ++_nextId;
-                request["cmd"] = "ping";
-                Send(request);
-                Receive(20000);
-            }
+            lock (_gate) { Execute("ping", null, "Tashkeel", null, false); }
         }
 
         public string Diacritize(string text)
@@ -2170,22 +2299,53 @@ namespace Qalam
         {
             lock (_gate)
             {
-                Dictionary<string, object> request = new Dictionary<string, object>();
-                request["id"] = ++_nextId;
-                request["cmd"] = command;
-                request["text"] = text;
-                if (!string.IsNullOrEmpty(lahja)) request["lahja"] = lahja;
-                Send(request);
-
-                Dictionary<string, object> response = Receive(20000);
-                bool ok = response.ContainsKey("ok") && Convert.ToBoolean(response["ok"]);
-                if (!ok)
-                {
-                    string error = response.ContainsKey("error") ? Convert.ToString(response["error"]) : "unknown error";
-                    throw new InvalidOperationException(name + " failed: " + error);
-                }
-                return CleanOutput(response.ContainsKey("text") ? Convert.ToString(response["text"]) : "");
+                return Execute(command, text, name, lahja, true);
             }
+        }
+
+        private string Execute(string command, string text, string name, string lahja, bool wantsText)
+        {
+            TashkeelWorkerException last = null;
+            for (int attempt = 0; attempt < 2; attempt++)
+            {
+                int id = ++_nextId;
+                Dictionary<string, object> request = new Dictionary<string, object>();
+                request["id"] = id;
+                request["cmd"] = command;
+                if (text != null) request["text"] = text;
+                if (!string.IsNullOrEmpty(lahja)) request["lahja"] = lahja;
+
+                try
+                {
+                    Send(request);
+                    Dictionary<string, object> response = Receive(20000, id);
+                    bool ok = response.ContainsKey("ok") && Convert.ToBoolean(response["ok"]);
+                    if (!ok)
+                    {
+                        string error = response.ContainsKey("error") ? Convert.ToString(response["error"]) : "unknown error";
+                        throw new InvalidOperationException(name + " failed: " + error);
+                    }
+                    return wantsText
+                        ? CleanOutput(response.ContainsKey("text") ? Convert.ToString(response["text"]) : "")
+                        : "";
+                }
+                catch (TashkeelWorkerException ex)
+                {
+                    // A child process can die or print a non-JSON diagnostic.
+                    // Do not leave that corpse attached to the client: discard
+                    // the streams and let the next request start a clean worker.
+                    last = ex;
+                    Kill();
+                    if (attempt == 0)
+                    {
+                        _restarts++;
+                        Logger.Write("tashkeel worker reset: " + ex.Message);
+                    }
+                }
+            }
+
+            throw new InvalidOperationException(
+                "Tashkeel worker failed after restart: " + (last == null ? "unknown error" : last.Message), last);
         }
 
         private static string CleanOutput(string value)
@@ -2202,29 +2362,83 @@ namespace Qalam
 
         private void Send(Dictionary<string, object> request)
         {
-            EnsureStarted();
-            _stdin.WriteLine(new JavaScriptSerializer().Serialize(request));
-            _stdin.Flush();
-        }
-
-        private Dictionary<string, object> Receive(int timeoutMs)
-        {
-            Task<string> read = _stdout.ReadLineAsync();
-            if (!read.Wait(timeoutMs))
+            try
+            {
+                EnsureStarted();
+                _stdin.WriteLine(new JavaScriptSerializer().Serialize(request));
+                _stdin.Flush();
+            }
+            catch (TashkeelWorkerException)
             {
                 Kill();
-                throw new TimeoutException("Tashkeel worker did not respond.");
+                throw;
             }
-            string line = read.Result;
+            catch (Exception ex)
+            {
+                Kill();
+                throw new TashkeelWorkerException("Tashkeel worker could not be started or written to: " + ex.Message, ex);
+            }
+        }
+
+        private Dictionary<string, object> Receive(int timeoutMs, int expectedId)
+        {
+            string line;
+            try
+            {
+                Task<string> read = _stdout.ReadLineAsync();
+                if (!read.Wait(timeoutMs))
+                    throw new TimeoutException("Tashkeel worker did not respond.");
+                line = read.Result;
+            }
+            catch (Exception ex)
+            {
+                Kill();
+                throw new TashkeelWorkerException("Tashkeel worker read failed: " + ex.Message, ex);
+            }
+
             if (line == null)
             {
                 Kill();
-                throw new InvalidOperationException("Tashkeel worker stopped.");
+                throw new TashkeelWorkerException("Tashkeel worker stopped.");
             }
-            Dictionary<string, object> response = new JavaScriptSerializer().DeserializeObject(line) as Dictionary<string, object>;
+
+            Dictionary<string, object> response = null;
+            try
+            {
+                response = new JavaScriptSerializer().DeserializeObject(line) as Dictionary<string, object>;
+            }
+            catch (Exception ex)
+            {
+                Kill();
+                throw new TashkeelWorkerException(
+                    "Tashkeel worker returned an invalid response: " + Brief(line), ex);
+            }
+
             if (response == null)
-                throw new InvalidOperationException("Bad tashkeel response.");
+            {
+                Kill();
+                throw new TashkeelWorkerException("Tashkeel worker returned an invalid response: " + Brief(line));
+            }
+
+            object idValue;
+            int responseId;
+            if (!response.TryGetValue("id", out idValue) ||
+                !Int32.TryParse(Convert.ToString(idValue), out responseId) ||
+                responseId != expectedId)
+            {
+                Kill();
+                throw new TashkeelWorkerException(
+                    "Tashkeel worker returned a stale response (wanted " + expectedId +
+                    ", got " + (idValue == null ? "none" : Convert.ToString(idValue)) + ").");
+            }
             return response;
+        }
+
+        private static string Brief(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return "empty line";
+            string clean = value.Replace("\r", " ").Replace("\n", " ").Trim();
+            return clean.Length <= 160 ? clean : clean.Substring(0, 160) + "\u2026";
         }
 
         private void EnsureStarted()
@@ -2233,7 +2447,7 @@ namespace Qalam
             Kill();
 
             if (!File.Exists(_script))
-                throw new FileNotFoundException("Tashkeel worker script not found: " + _script);
+                throw new TashkeelWorkerException("Tashkeel worker script not found: " + _script);
 
             ProcessStartInfo info = new ProcessStartInfo(_python, "-u \"" + _script + "\"");
             info.UseShellExecute = false;
@@ -2280,6 +2494,134 @@ namespace Qalam
         public void Dispose()
         {
             lock (_gate) { Kill(); }
+        }
+    }
+
+    // Headless regression for the worker lifecycle. It uses a throwaway Python
+    // script so a protocol failure can be forced without touching the installed
+    // Mishkal environment or sending any text to a translation service.
+    internal static class TashkeelSelfTest
+    {
+        public static int Run(string[] args)
+        {
+            string output = Arg(args, "--out");
+            if (string.IsNullOrEmpty(output)) output = Path.Combine(Paths.AppDir, "tashkeeltest.txt");
+            string python = Arg(args, "--python");
+            if (string.IsNullOrEmpty(python))
+            {
+                string installed = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "Qalam", "tashkeel", ".venv", "Scripts", "python.exe");
+                python = File.Exists(installed) ? installed : "python.exe";
+            }
+
+            StringBuilder log = new StringBuilder();
+            int exitCode = 0;
+            string directory = Path.Combine(Path.GetTempPath(), "qalam-tashkeeltest-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(directory);
+                log.AppendLine("python=" + python);
+
+                string crashMarker = Path.Combine(directory, "crash.marker");
+                string crashScript = Path.Combine(directory, "crash_worker.py");
+                File.WriteAllText(crashScript, CrashWorker(crashMarker), Utf8.NoBom);
+                using (TashkeelClient client = new TashkeelClient(python, crashScript))
+                {
+                    try
+                    {
+                        string value = client.Diacritize("test");
+                        log.AppendLine("crash_recovery=" + value + " restarts=" + client.Restarts);
+                        if (value != "clean" || client.Restarts != 1) exitCode = 1;
+                    }
+                    catch (Exception ex)
+                    {
+                        exitCode = 1;
+                        log.AppendLine("crash_recovery_FAIL=" + ex.Message);
+                    }
+                }
+
+                string staleMarker = Path.Combine(directory, "stale.marker");
+                string staleScript = Path.Combine(directory, "stale_worker.py");
+                File.WriteAllText(staleScript, StaleWorker(staleMarker), Utf8.NoBom);
+                using (TashkeelClient client = new TashkeelClient(python, staleScript))
+                {
+                    try
+                    {
+                        string value = client.Diacritize("test");
+                        log.AppendLine("stale_response_recovery=" + value + " restarts=" + client.Restarts);
+                        if (value != "clean" || client.Restarts != 1) exitCode = 1;
+                    }
+                    catch (Exception ex)
+                    {
+                        exitCode = 1;
+                        log.AppendLine("stale_response_FAIL=" + ex.Message);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                exitCode = 1;
+                log.AppendLine("FAIL: " + ex);
+            }
+            finally
+            {
+                try { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+                catch { }
+            }
+
+            log.AppendLine("result=" + (exitCode == 0 ? "PASS" : "FAIL"));
+            string fullOutput = Path.GetFullPath(output);
+            string parent = Path.GetDirectoryName(fullOutput);
+            if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
+            File.WriteAllText(fullOutput, log.ToString(), Utf8.NoBom);
+            Console.WriteLine(log.ToString());
+            return exitCode;
+        }
+
+        private static string CrashWorker(string marker)
+        {
+            return "import json, os, sys\n" +
+                   "marker = " + PyString(marker) + "\n" +
+                   "if not os.path.exists(marker):\n" +
+                   "    open(marker, 'w').close()\n" +
+                   "    print('Fatal Python error: simulated worker crash', flush=True)\n" +
+                   "    sys.exit(1)\n" +
+                   "for line in sys.stdin:\n" +
+                   "    line = line.strip()\n" +
+                   "    if not line:\n        continue\n" +
+                   "    req = json.loads(line)\n" +
+                   "    print(json.dumps({'id': req.get('id'), 'ok': True, 'text': 'clean'}), flush=True)\n";
+        }
+
+        private static string StaleWorker(string marker)
+        {
+            return "import json, os, sys\n" +
+                   "marker = " + PyString(marker) + "\n" +
+                   "if not os.path.exists(marker):\n" +
+                   "    open(marker, 'w').close()\n" +
+                   "    req = json.loads(sys.stdin.readline())\n" +
+                   "    print(json.dumps({'id': 999999, 'ok': True, 'text': 'stale'}), flush=True)\n" +
+                   "    sys.exit(0)\n" +
+                   "for line in sys.stdin:\n" +
+                   "    line = line.strip()\n" +
+                   "    if not line:\n        continue\n" +
+                   "    req = json.loads(line)\n" +
+                   "    print(json.dumps({'id': req.get('id'), 'ok': True, 'text': 'clean'}), flush=True)\n";
+        }
+
+        private static string PyString(string value)
+        {
+            return "'" + value.Replace("\\", "\\\\").Replace("'", "\\'") + "'";
+        }
+
+        private static string Arg(string[] args, string name)
+        {
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase))
+                    return args[i + 1];
+            }
+            return null;
         }
     }
 
@@ -3088,6 +3430,7 @@ namespace Qalam
             _cachedSynonyms.Clear();
             _cachedExamples.Clear();
             _cachedGrammar = null;
+            SpeechService.Prewarm(_translationText, _speechLang);
             Present();
         }
 
@@ -3145,6 +3488,12 @@ namespace Qalam
             _tashkeelSpeech = "";
             _tashkeelSpeechLang = "ar";
             _tashkeelKind = "TASHKEEL";
+            if (_tashkeel != null) _tashkeel.Text = "";
+            if (_transliteration != null)
+            {
+                _transliteration.Text = "";
+                _transliteration.Visibility = Visibility.Collapsed;
+            }
             if (_charactersButton != null) _charactersButton.Visibility = Visibility.Collapsed;
             _cachedTashkeel = "";
             _cachedTashkeelRole = "";
@@ -3457,6 +3806,7 @@ namespace Qalam
         private MainWindow _main;
         private TranslationResult _last;
         private long _lastTriggerTicks;
+        private int _analysisGeneration;
         private uint _pendingSequence;
         private bool _documentRunning;
         private bool _disposed;
@@ -3636,8 +3986,7 @@ namespace Qalam
                         if (_main != null) _main.TranslateText(selected);
                         return;
                     }
-                    _popup.ShowLoading(selected);
-                    await AnalyzeAndShowAsync(selected, false);
+                    await AnalyzeAndShowAsync(selected, true);
                     return;
                 }
 
@@ -3669,8 +4018,7 @@ namespace Qalam
                     if (_main != null) _main.TranslateText(text);
                     return;
                 }
-                _popup.ShowLoading(text);
-                await AnalyzeAndShowAsync(text, false);
+                await AnalyzeAndShowAsync(text, true);
             }
             catch (Exception ex)
             {
@@ -3678,7 +4026,7 @@ namespace Qalam
             }
         }
 
-        private async Task ShowGrammarAsync(Task<GrammarInfo> task, string text)
+        private async Task ShowGrammarAsync(Task<GrammarInfo> task, string text, int generation)
         {
             GrammarInfo grammar = null;
             if (task != null)
@@ -3694,6 +4042,8 @@ namespace Qalam
             {
                 grammar = _grammar.LookupCached(text);
             }
+
+            if (generation != _analysisGeneration) return;
 
             // A language-keyed miss can still exist under another cached
             // language for the same spelling (for example an English/Spanish
@@ -3715,6 +4065,7 @@ namespace Qalam
 
         private async Task AnalyzeAndShowAsync(string text, bool showLoading)
         {
+            int generation = ++_analysisGeneration;
             if (showLoading) _popup.ShowLoading(text);
 
             TranslationResult result = new TranslationResult();
@@ -3744,6 +4095,7 @@ namespace Qalam
                 try
                 {
                     outcome = await _translator.TranslateAsync(text, target);
+                    if (generation != _analysisGeneration) return;
                     result.Translation = outcome.Text;
                     result.Detected = outcome.Detected;
                     result.Engine = outcome.Engine;
@@ -3755,6 +4107,7 @@ namespace Qalam
                 }
             }
 
+            if (generation != _analysisGeneration) return;
             _popup.ShowResult(result);
             _last = result;
             Logger.Write("result " + (result.Detected == null ? "?" : result.Detected) + "->" + result.Target +
@@ -3770,7 +4123,7 @@ namespace Qalam
                 // The cache can still answer a single-word lookup when the
                 // translation path failed, for example offline with no model.
                 if (grammarTask != null || IsSingleWord(text))
-                    await ShowGrammarAsync(grammarTask, text);
+                    await ShowGrammarAsync(grammarTask, text, generation);
                 return;
             }
 
@@ -3838,13 +4191,14 @@ namespace Qalam
                 try
                 {
                     string pinyin = await Task.Run(() => _tashkeel.Pinyin(transcription));
+                    if (generation != _analysisGeneration) return;
                     Logger.Write("pinyin ok: " + role + " chars=" + pinyin.Length);
                     _popup.ShowPinyin(pinyin, speech, role);
                 }
                 catch (Exception ex)
                 {
                     Logger.Write("pinyin: " + ex.Message);
-                    _popup.ShowTranscriptionUnavailable("Pinyin");
+                    if (generation == _analysisGeneration) _popup.ShowTranscriptionUnavailable("Pinyin");
                 }
             }
             else if (kind == "TASHKEEL")
@@ -3852,21 +4206,25 @@ namespace Qalam
                 try
                 {
                     string vocalized = await Task.Run(() => _tashkeel.Diacritize(transcription, _config.SpokenLahjah));
+                    if (generation != _analysisGeneration) return;
                     Logger.Write("tashkeel ok: " + role + " chars=" + vocalized.Length);
                     string romanized = null;
                     try { romanized = await Task.Run(() => _tashkeel.Transliterate(transcription, _config.SpokenLahjah)); }
                     catch (Exception ex) { Logger.Write("transliteration: " + ex.Message); }
+                    if (generation != _analysisGeneration) return;
                     _popup.ShowTashkeel(vocalized, role, romanized);
                 }
                 catch (Exception ex)
                 {
                     Logger.Write("tashkeel: " + ex.Message);
-                    _popup.ShowTranscriptionUnavailable("Tashkeel");
+                    if (generation == _analysisGeneration) _popup.ShowTranscriptionUnavailable("Tashkeel");
                 }
             }
 
             if (grammarTask != null || offlineMode)
-                await ShowGrammarAsync(grammarTask, text);
+                await ShowGrammarAsync(grammarTask, text, generation);
+
+            if (generation != _analysisGeneration) return;
 
             if (immediateSynonyms != null)
             {
@@ -3878,6 +4236,7 @@ namespace Qalam
                 try
                 {
                     List<string> synonyms = await synonymsTask;
+                    if (generation != _analysisGeneration) return;
                     Logger.Write("synonyms=" + synonyms.Count);
                     _popup.ShowSynonyms(synonyms);
                 }
@@ -3897,6 +4256,7 @@ namespace Qalam
                 try
                 {
                     List<ExamplePair> examples = await examplesTask;
+                    if (generation != _analysisGeneration) return;
                     Logger.Write("examples=" + examples.Count);
                     _popup.ShowExamples(examples);
                 }

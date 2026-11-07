@@ -552,6 +552,7 @@ namespace Qalam
                 _currentResult = result;
                 _lastTranslation = result.Translation ?? "";
                 if (_tashkeelCard != null) _tashkeelCard.Visibility = Visibility.Collapsed;
+                if (_tashkeelText != null) _tashkeelText.Text = "";
                 if (_grammarCard != null) _grammarCard.Visibility = Visibility.Collapsed;
                 if (_wordingCard != null) _wordingCard.Visibility = Visibility.Collapsed;
                 ShowResult(result);
@@ -925,6 +926,7 @@ namespace Qalam
             _status.Text = "Translating\u2026";
             _status.Foreground = Ui.WarnBrush;
             _tashkeelCard.Visibility = Visibility.Collapsed;
+            if (_tashkeelText != null) _tashkeelText.Text = "";
             _grammarCard.Visibility = Visibility.Collapsed;
             string target = ResolveTarget(text);
             _langPair.Text = (ArabicText.ContainsArabic(text) ? "AR" : "\u2026") + "  \u2192  " + target.ToUpperInvariant();
@@ -1042,6 +1044,8 @@ namespace Qalam
         private void ShowResult(TranslationResult result)
         {
             ListenControl.ResetAll();
+            if (_tashkeelCard != null) _tashkeelCard.Visibility = Visibility.Collapsed;
+            if (_tashkeelText != null) _tashkeelText.Text = "";
             _resultCard.Visibility = Visibility.Visible;
             _sourceText.Text = result.SourceText ?? "";
             _langPair.Text = (string.IsNullOrEmpty(result.Detected) ? "?" : result.Detected.ToUpperInvariant())
@@ -1060,6 +1064,7 @@ namespace Qalam
             _translationSpeechLang = SpeechLanguage.Resolve(_translationSpeechText, result.Target);
             SpokenText.Render(_translation, _translationSpeechText, _translationSpeechLang);
             if (_translationListenButton != null) _translationListenButton.IsEnabled = !string.IsNullOrEmpty(_translationSpeechText) && !string.IsNullOrEmpty(_translationSpeechLang);
+            SpeechService.Prewarm(_translationSpeechText, _translationSpeechLang);
         }
         private void ShowCachedGrammar(string text, int request)
         {

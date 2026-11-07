@@ -128,9 +128,37 @@ queries. Packs are loaded lazily by language pair: the installed log shows
 for the two directions exercised by `--selftest`, while app startup itself performs no
 pack load.
 
+## View in App handoff
+
+`view-in-app-smoke.ps1` exercises the installed build's **View in App** path end to
+end. It launches Qalam in the background, opens a temporary Arabic source window,
+waits for the popup, clicks **View in App**, and verifies that the main window gets
+the original source and translation, shows `Opened from the compact pop-up.`, closes
+the popup, leaves history unchanged, and does not translate again. The test creates
+a unique token, preserves and restores `history.json` and the clipboard, and exits
+nonzero on failure. It writes `view-in-app-smoke.json` and
+`view-in-app-smoke.trace` beside the script.
+
+Close Qalam first. The default source is Arabic and the test expects an
+Arabic-to-English result, so set the Qalam target to English or enable AutoTarget;
+the test refuses to touch an existing Qalam session.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\selftest\view-in-app-smoke.ps1
+```
+
+Use `-AppPath` to test a local build and `-ResultPath` / `-TracePath` to put the
+artifacts elsewhere:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\selftest\view-in-app-smoke.ps1 `
+  -AppPath .\dist\Qalam.exe -ResultPath .\selftest\view-in-app-local.json
+```
+
 ## Reproduce
 
 ```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\selftest\view-in-app-smoke.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\selftest\test-chrome.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\selftest\test-vscode.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\selftest\test-word.ps1

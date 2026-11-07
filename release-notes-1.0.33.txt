@@ -1,0 +1,8 @@
+Qalam 1.0.33
+
+- Listen prewarms the first audio chunk when a result appears, can be cancelled while loading, and switches between normal and slow playback without repeating a syllable.
+- The Arabic tashkeel worker now recovers from crashes, invalid output, and stale responses instead of leaving the next lookup broken.
+- New results clear stale tashkeel and transliteration text before they are shown.
+- Popup analysis now ignores late results from an older selection.
+- Release builds reject corrupted non-ASCII notes and update manifests before publishing.
+- Added regression coverage for the tashkeel worker lifecycle and the View in App handoff.

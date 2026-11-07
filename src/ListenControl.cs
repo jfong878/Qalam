@@ -19,6 +19,7 @@ namespace Qalam
         private readonly Func<string> _language;
         private Mode _mode = Mode.Idle;
         private bool _busy;
+        private bool _loading;
         private int _generation;
 
         public ListenControl(Button button, Func<string> text, Func<string> language)
@@ -27,6 +28,8 @@ namespace Qalam
             _text = text;
             _language = language;
             _button.Click += OnClick;
+            _button.MouseEnter += delegate { Prewarm(); };
+            _button.GotKeyboardFocus += delegate { Prewarm(); };
             _button.ToolTip = "Play · pause · play slowly (0.65×)";
             lock (All) All.Add(new WeakReference(this));
             Update();
@@ -85,8 +88,19 @@ namespace Qalam
         private void Reset()
         {
             _generation++;
+            _busy = false;
+            _loading = false;
             _mode = Mode.Idle;
             Update();
+        }
+
+        private void Prewarm()
+        {
+            if (_busy || _mode != Mode.Idle) return;
+            string text = _text == null ? "" : (_text() ?? "");
+            string language = _language == null ? "" : (_language() ?? "");
+            if (text.Length == 0 || language.Length == 0) return;
+            SpeechService.Prewarm(text, language);
         }
 
         private async void OnClick(object sender, System.Windows.RoutedEventArgs e)
@@ -94,9 +108,24 @@ namespace Qalam
             string text = _text == null ? "" : (_text() ?? "");
             string language = _language == null ? "" : (_language() ?? "");
             if (text.Length == 0 || language.Length == 0) return;
-            if (_busy) return;
+            if (_busy)
+            {
+                // The first chunk can take a moment; let a second click cancel
+                // instead of silently ignoring it.
+                if (_loading)
+                {
+                    _generation++;
+                    _busy = false;
+                    _loading = false;
+                    SpeechService.Stop();
+                    _mode = Mode.Idle;
+                    Update();
+                }
+                return;
+            }
 
             _busy = true;
+            _loading = false;
             int generation = ++_generation;
             if (!SpeechService.Matches(text, language) && _mode != Mode.Idle)
                 _mode = Mode.Idle;
@@ -108,8 +137,11 @@ namespace Qalam
                     case Mode.Idle:
                         // The first chunk is usually ready in a fraction of a
                         // second; show that the request is alive while it lands.
-                        _button.Content = "Loading…";
+                        _loading = true;
+                        _button.Content = "Cancel";
                         await SpeechService.PlayAsync(text, language, 1.0, true);
+                        if (generation != _generation) return;
+                        _loading = false;
                         _mode = Mode.Playing;
                         break;
                     case Mode.Playing:
@@ -118,6 +150,7 @@ namespace Qalam
                         break;
                     case Mode.Paused:
                         await SpeechService.PlayAsync(text, language, 0.65, false);
+                        if (generation != _generation) return;
                         _mode = Mode.SlowPlaying;
                         break;
                     case Mode.SlowPlaying:
@@ -126,6 +159,7 @@ namespace Qalam
                         break;
                     case Mode.SlowPaused:
                         await SpeechService.PlayAsync(text, language, 1.0, false);
+                        if (generation != _generation) return;
                         _mode = Mode.Playing;
                         break;
                 }
@@ -138,8 +172,12 @@ namespace Qalam
             }
             finally
             {
-                _busy = false;
-                if (generation == _generation) Update();
+                if (generation == _generation)
+                {
+                    _busy = false;
+                    _loading = false;
+                    Update();
+                }
             }
         }
 
