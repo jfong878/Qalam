@@ -12,6 +12,15 @@ release feed at `latest.json` carries the same text as each entry here.
 - Pre-release identifiers (`1.1.0-alpha.1`) for internal iterations; the core
   integers move only when the batch is finished.
 
+## Unreleased
+
+Single-word lookups now show a local **Senses** card. Lane's *Arabic-English Lexicon*
+supplies classical Arabic root senses and CC-CEDICT supplies modern Mandarin word
+entries, each labeled by era and source. When a translation is available, its words
+rank the senses and the card credit names the ranking context; this is not full
+sentence disambiguation. The packs are bundled, work offline, and are attributed under
+their open licenses. The translation path is unchanged; Hans Wehr is not bundled.
+
 ## 1.0.0 — 2026-11-03
 
 Initial public Windows build with automatic GitHub updates. The setup is unsigned; Windows SmartScreen may warn on first download.

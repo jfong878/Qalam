@@ -40,6 +40,10 @@ namespace Qalam
         private readonly Border _grammarCard;
         private readonly TextBlock _grammarTitle;
         private readonly TextBlock _grammarText;
+        private readonly Border _lexiconCard;
+        private readonly TextBlock _lexiconTitle;
+        private readonly TextBlock _lexiconText;
+        private readonly TextBlock _lexiconCredit;
         private readonly Button _targetButton;
         private readonly Button _providerButton;
         private readonly Button _translateButton;
@@ -466,6 +470,29 @@ namespace Qalam
             _grammarCard.Child = grammarStack;
             stack.Children.Add(_grammarCard);
 
+            _lexiconCard = new Border();
+            _lexiconCard.Background = Ui.Panel;
+            _lexiconCard.BorderBrush = Ui.Line;
+            _lexiconCard.BorderThickness = new Thickness(1);
+            _lexiconCard.CornerRadius = new CornerRadius(12);
+            _lexiconCard.Padding = new Thickness(18, 14, 18, 16);
+            _lexiconCard.Margin = new Thickness(0, 12, 0, 0);
+            _lexiconCard.Visibility = Visibility.Collapsed;
+
+            StackPanel lexiconStack = new StackPanel();
+            _lexiconTitle = Ui.Label("SENSES", 9.5, Ui.Gold, FontWeights.SemiBold);
+            lexiconStack.Children.Add(_lexiconTitle);
+            _lexiconText = Ui.Label("", 12, Ui.Bright, FontWeights.Normal);
+            _lexiconText.TextWrapping = TextWrapping.Wrap;
+            _lexiconText.LineHeight = 20;
+            _lexiconText.Margin = new Thickness(0, 7, 0, 0);
+            lexiconStack.Children.Add(_lexiconText);
+            _lexiconCredit = Ui.Label("Senses: Lane's Lexicon  \u00b7  CC-CEDICT", 8.5, Ui.Faint, FontWeights.Normal);
+            _lexiconCredit.Margin = new Thickness(0, 7, 0, 0);
+            lexiconStack.Children.Add(_lexiconCredit);
+            _lexiconCard.Child = lexiconStack;
+            stack.Children.Add(_lexiconCard);
+
             TextBlock hint = Ui.Label(
                 "Highlight, then Ctrl + C + C anywhere  \u00b7  Ctrl + Enter to Translate",
                 10, Ui.Faint, FontWeights.Normal);
@@ -554,8 +581,10 @@ namespace Qalam
                 if (_tashkeelCard != null) _tashkeelCard.Visibility = Visibility.Collapsed;
                 if (_tashkeelText != null) _tashkeelText.Text = "";
                 if (_grammarCard != null) _grammarCard.Visibility = Visibility.Collapsed;
+                if (_lexiconCard != null) _lexiconCard.Visibility = Visibility.Collapsed;
                 if (_wordingCard != null) _wordingCard.Visibility = Visibility.Collapsed;
                 ShowResult(result);
+                ShowLexicon(result.SourceText, result.Detected, result.Translation);
                 _status.Text = "Opened from the compact pop-up.";
                 _status.Foreground = Ui.Muted;
                 Activate();
@@ -928,6 +957,7 @@ namespace Qalam
             _tashkeelCard.Visibility = Visibility.Collapsed;
             if (_tashkeelText != null) _tashkeelText.Text = "";
             _grammarCard.Visibility = Visibility.Collapsed;
+            if (_lexiconCard != null) _lexiconCard.Visibility = Visibility.Collapsed;
             string target = ResolveTarget(text);
             _langPair.Text = (ArabicText.ContainsArabic(text) ? "AR" : "\u2026") + "  \u2192  " + target.ToUpperInvariant();
             bool offlineMode = string.Equals(_config.TranslationMode, "offline", StringComparison.OrdinalIgnoreCase);
@@ -951,6 +981,7 @@ namespace Qalam
                 if (_onResult != null) _onResult(result);
 
                 ShowResult(result);
+                ShowLexicon(text, result.Detected, result.Translation);
                 if (!string.IsNullOrEmpty(result.Translation))
                 {
                     HistoryStore.Add(ToHistoryEntry(result));
@@ -1024,6 +1055,8 @@ namespace Qalam
             if (_langPair != null) _langPair.Text = "";
             if (_tashkeelText != null) _tashkeelText.Text = "";
             if (_grammarText != null) _grammarText.Text = "";
+            if (_lexiconText != null) _lexiconText.Text = "";
+            if (_lexiconCredit != null) _lexiconCredit.Text = "";
             if (_wordingText != null) _wordingText.Text = "";
             if (_copyButton != null) _copyButton.IsEnabled = false;
             if (_sourceListenButton != null) _sourceListenButton.IsEnabled = false;
@@ -1032,6 +1065,7 @@ namespace Qalam
             if (_resultCard != null) _resultCard.Visibility = Visibility.Collapsed;
             if (_tashkeelCard != null) _tashkeelCard.Visibility = Visibility.Collapsed;
             if (_grammarCard != null) _grammarCard.Visibility = Visibility.Collapsed;
+            if (_lexiconCard != null) _lexiconCard.Visibility = Visibility.Collapsed;
             if (_wordingCard != null) _wordingCard.Visibility = Visibility.Collapsed;
             if (_status != null)
             {
@@ -1047,6 +1081,7 @@ namespace Qalam
             if (_tashkeelCard != null) _tashkeelCard.Visibility = Visibility.Collapsed;
             if (_tashkeelText != null) _tashkeelText.Text = "";
             _resultCard.Visibility = Visibility.Visible;
+            if (_lexiconCard != null) _lexiconCard.Visibility = Visibility.Collapsed;
             _sourceText.Text = result.SourceText ?? "";
             _langPair.Text = (string.IsNullOrEmpty(result.Detected) ? "?" : result.Detected.ToUpperInvariant())
                 + "  →  " + (result.Target == null ? "?" : result.Target.ToUpperInvariant());
@@ -1090,6 +1125,33 @@ namespace Qalam
             _grammarText.FlowDirection = FlowDirection.LeftToRight;
             _grammarText.TextAlignment = TextAlignment.Left;
             _grammarCard.Visibility = Visibility.Visible;
+        }
+
+        private void ShowLexicon(string text, string detected, string context)
+        {
+            if (_lexiconCard == null) return;
+            if (!IsSingleWord(text))
+            {
+                _lexiconCard.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            LexiconInfo info = LexiconService.Shared.Lookup(text, detected, context);
+            if (info == null || !info.HasContent)
+            {
+                _lexiconCard.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            _lexiconTitle.Text = LexiconText.Title(info);
+            _lexiconText.Text = LexiconText.Summary(info);
+            _lexiconText.FlowDirection = FlowDirection.LeftToRight;
+            _lexiconText.TextAlignment = TextAlignment.Left;
+            string credit = "Sources: " + info.Sources;
+            if (!string.IsNullOrEmpty(info.Context))
+                credit = "Ranked for \u201c" + info.Context + "\u201d  \u00b7  " + credit;
+            _lexiconCredit.Text = credit;
+            _lexiconCard.Visibility = Visibility.Visible;
         }
 
         private static bool IsSingleWord(string text)

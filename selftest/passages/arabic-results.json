@@ -1,0 +1,23 @@
+[
+  {
+    "translation": "Not on purpose\nIt is obligatory when it is invalidated by intentionally doing so. \nIt is a Sunnah to say a lawful statement in the wrong place by mistake, and it is not invalidated by doing it intentionally, and it is permissible to abandon a Sunnah.",
+    "detected": null,
+    "target": "en",
+    "engine": null,
+    "label": "verbatim"
+  },
+  {
+    "translation": "Not on purpose\nIt is obligatory when it is invalidated by intentionally doing it. \nIt is a Sunnah to pronounce a lawful statement in the wrong place by mistake, and it is not invalidated by doing it intentionally. It is permissible to abandon a Sunnah.",
+    "detected": null,
+    "target": "en",
+    "engine": null,
+    "label": "cleaned"
+  },
+  {
+    "translation": "Prostration of forgetfulness\nNot on purpose\nIt is obligatory when it is invalidated by intentionally doing so. \nIt is a Sunnah to say a lawful statement in the wrong place by mistake, and it is not invalidated by doing it intentionally, and it is permissible to abandon a Sunnah.",
+    "detected": null,
+    "target": "en",
+    "engine": null,
+    "label": "with_heading"
+  }
+]

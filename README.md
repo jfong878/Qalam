@@ -31,6 +31,9 @@ see [ANALYSIS.md](ANALYSIS.md).
      Tatoeba and MyMemory only when the local packs have no match, with attribution,
    - **grammar and conjugation** for single words from Wiktionary via Kaikki, cached
      locally so recently viewed cards work in offline mode,
+   - a **Senses** card for single words with locally bundled Lane's Lexicon
+     classical Arabic root senses and CC-CEDICT Chinese word entries, labeled by
+     era and source,
    - a **target-language selector** in the popup itself,
    - **Listen** buttons for pronunciation and copy buttons for the text,
    - a **View in App** action that opens the full window with the current source
@@ -286,6 +289,32 @@ entries). A card served from that file is marked **CACHED**. In `offline` mode Q
 reads only this cache for grammar and never contacts `kaikki.org`; a word that has
 never been looked up online shows no grammar card until it has been cached once.
 
+## Senses and lexicons
+
+A single-word lookup also shows a **Senses** card below the grammar card. This is a
+local reference layer, not a second translation. Arabic entries come from Lane's
+*Arabic-English Lexicon* (1863–93), indexed by root; each gloss is labeled **Classical**.
+Lane's transliteration remains in the data but is not repeated on every card line.
+Chinese entries come from **CC-CEDICT**, indexed by simplified and traditional headword,
+and are labeled **Modern** with numeric pinyin. The card lists up to eight senses, names
+the source and license underneath, and works without a network because the packs ship
+with the app. Arabic derived forms get a conservative prefix/weak-letter fallback to the
+root, so `كتاب` and `استكتب` reach the same `كتب` entry; the card still labels the result
+as a root lookup.
+
+When the app has a translation, it ranks the senses against that translation and shows
+`Ranked for “…”` in the credit line. This is translation-aware ranking, not full
+sentence disambiguation, and the card still appears only for a single-word lookup.
+
+Lane's Perseus XML is CC BY-SA 3.0 and its text is public domain; CC-CEDICT is
+CC BY-SA 4.0. Attribution and regeneration instructions are in
+[data/lexicon/README.md](data/lexicon/README.md). Hans Wehr's *Dictionary of Modern
+Written Arabic* is still in copyright and is not bundled. Lane is a 19th-century
+classical dictionary and CC-CEDICT is modern Mandarin, so the era label is part of the
+meaning: a modern gloss can be the wrong reading for a classical text. The translation
+engine is deliberately unchanged; Qalam shows the range of senses rather than silently
+choosing one.
+
 ## Study
 
 **Study** turns saved results into a local spaced-repetition deck. Use **Study** on
@@ -475,7 +504,7 @@ looked up in the local phrasebook and concordance first; Tatoeba and MyMemory ar
 contacted only when those local sources do not provide enough lines. Grammar lookups
 go to `kaikki.org`. Qalam races Google's translation shapes and falls back to
 MyMemory using the detected source language if both fail. The curated phrasebook and
-concordance are local. When a local Ollama model is running, colloquial text is sent
+concordance are local, as are the bundled lexicon packs. When a local Ollama model is running, colloquial text is sent
 to it over the loopback interface and does not leave this machine; otherwise the
 online services above are used.
 
@@ -606,6 +635,11 @@ Android binary.
   characters with concise glosses; it does not include word entries, example sentences,
   etymology, or characters outside the BMP. Stroke outlines are downloaded per character
   and need one connection unless already cached.
+- **Lexicon coverage is source-bounded.** Lane's pack is root-indexed classical Arabic
+  and retains its transliteration as metadata rather than reconstructing vocalized
+  forms; CC-CEDICT is modern Mandarin and does not cover classical Chinese. The card
+  ranks single-word senses by the available translation but does not resolve
+  sentence-level context. Hans Wehr is not bundled.
 - **Selection acquisition.** Qalam asks UI Automation for the focused control's
   selected text first, then falls back to the clipboard. An app that exposes neither a
   UIA text selection nor Ctrl+C copying cannot be supported.

@@ -38,6 +38,7 @@ New-Item -ItemType Directory -Force -Path (Join-Path $stage 'tashkeel') | Out-Nu
 New-Item -ItemType Directory -Force -Path (Join-Path $stage 'documents') | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $stage 'mobile') | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $stage 'data') | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $stage 'data\lexicon') | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $stage 'concordance') | Out-Null
 
 Copy-Item -LiteralPath (Join-Path $dist 'Qalam.exe') -Destination (Join-Path $stage 'dist\Qalam.exe') -Force
@@ -54,6 +55,10 @@ Copy-Item -LiteralPath (Join-Path $root 'README.md') -Destination (Join-Path $st
 
 Get-ChildItem -LiteralPath (Join-Path $root 'data') -File -Filter '*.tsv' | ForEach-Object {
     Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $stage ('data\' + $_.Name)) -Force
+}
+$lexiconSource = Join-Path $root 'data\lexicon'
+if (Test-Path -LiteralPath $lexiconSource) {
+    Copy-Item -Path (Join-Path $lexiconSource '*') -Destination (Join-Path $stage 'data\lexicon') -Recurse -Force
 }
 # Ship the review-sized seed packs. The 100k/depth corpora are installed
 # separately; embedding them would make every update hundreds of megabytes.

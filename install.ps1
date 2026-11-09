@@ -109,6 +109,12 @@ if (Test-Path -LiteralPath $dataSource) {
     Get-ChildItem -LiteralPath $dataSource -Filter '*.tsv' | ForEach-Object {
         Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $dataDest $_.Name) -Force
     }
+    $lexiconSource = Join-Path $dataSource 'lexicon'
+    if (Test-Path -LiteralPath $lexiconSource) {
+        $lexiconDest = Join-Path $dataDest 'lexicon'
+        New-Item -ItemType Directory -Force -Path $lexiconDest | Out-Null
+        Copy-Item -Path (Join-Path $lexiconSource '*') -Destination $lexiconDest -Recurse -Force
+    }
 }
 
 # Seed packs ship with the app. An existing pack with the same name is a

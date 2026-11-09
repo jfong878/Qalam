@@ -51,6 +51,12 @@ namespace Qalam
             if (args.Any(a => string.Equals(a, "--grammartest", StringComparison.OrdinalIgnoreCase)))
                 return GrammarSelfTest.Run(args);
 
+            if (args.Any(a => string.Equals(a, "--lexicontest", StringComparison.OrdinalIgnoreCase)))
+                return LexiconSelfTest.Run(args);
+
+            if (args.Any(a => string.Equals(a, "--lexiconuitest", StringComparison.OrdinalIgnoreCase)))
+                return LexiconSelfTest.RunUi(args);
+
             if (args.Any(a => string.Equals(a, "--buildconcordance", StringComparison.OrdinalIgnoreCase)))
                 return ConcordanceBuilder.Run(args);
 

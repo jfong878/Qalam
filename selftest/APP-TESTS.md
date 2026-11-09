@@ -155,6 +155,21 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\selftest\view-in-app-smoke
   -AppPath .\dist\Qalam.exe -ResultPath .\selftest\view-in-app-local.json
 ```
 
+## Senses card
+
+`Qalam.exe --lexiconuitest --out .\selftest\lexicon` builds the real WPF main
+window offscreen and checks both direct single-word lookups and the popup-result
+path. It writes `lexicon-ui.txt` plus `lexicon-ar.png`, `lexicon-zh.png`, and
+`lexicon-popup-ar.png`. The Arabic cases cover `كتب` with context `wrote` and derived
+`كتاب` with context `book`; the Chinese case covers `学生` with context `student`. It
+exits nonzero if the card is hidden, the expected language/root title is missing, the
+first sense does not match the requested context, or the context credit is absent. The
+harness does not contact a translation provider or change translation history.
+
+```powershell
+& .\dist\Qalam.exe --lexiconuitest --out .\selftest\lexicon
+```
+
 ## Reproduce
 
 ```powershell
@@ -165,6 +180,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\selftest\test-word.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\selftest\trigger-grammar-test.ps1
 & "$env:LOCALAPPDATA\Qalam\Qalam.exe" --concordancetest --out .\concordance
 & "$env:LOCALAPPDATA\Qalam\Qalam.exe" --findconcordance --query "cabrón" --from es --to en --out .\query.txt
+& .\dist\Qalam.exe --lexiconuitest --out .\selftest\lexicon
 ```
 
 The application tests write `app-test-<name>.json`; the trigger harnesses log through

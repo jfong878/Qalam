@@ -1,0 +1,30 @@
+count=215759
+error=
+كتب [ar] ok=True gloss=True source=True senses=8
+  He wrote it; he asked; to dictate it  (Lane's Arabic-English Lexicon (1863-93), Perseus)
+  He tied the udder of the camel.  (Lane's Arabic-English Lexicon (1863-93), Perseus)
+  He wrote to his friend  (Lane's Arabic-English Lexicon (1863-93), Perseus)
+  He dictated.  (Lane's Arabic-English Lexicon (1863-93), Perseus)
+  He girded himself, and drew together his garments upon him.  (Lane's Arabic-English Lexicon (1863-93), Perseus)
+  syn. with; writing a book, transcribing it; from another book  (Lane's Arabic-English Lexicon (1863-93), Perseus)
+  A thong with which one sews  (Lane's Arabic-English Lexicon (1863-93), Perseus)
+  A mode; manner, of writing.  (Lane's Arabic-English Lexicon (1863-93), Perseus)
+كَتَبَ [ar] ok=True gloss=True source=True senses=8
+  He wrote it; he asked; to dictate it  (Lane's Arabic-English Lexicon (1863-93), Perseus)
+  He tied the udder of the camel.  (Lane's Arabic-English Lexicon (1863-93), Perseus)
+  He wrote to his friend  (Lane's Arabic-English Lexicon (1863-93), Perseus)
+  He dictated.  (Lane's Arabic-English Lexicon (1863-93), Perseus)
+  He girded himself, and drew together his garments upon him.  (Lane's Arabic-English Lexicon (1863-93), Perseus)
+  syn. with; writing a book, transcribing it; from another book  (Lane's Arabic-English Lexicon (1863-93), Perseus)
+  A thong with which one sews  (Lane's Arabic-English Lexicon (1863-93), Perseus)
+  A mode; manner, of writing.  (Lane's Arabic-English Lexicon (1863-93), Perseus)
+كتاب [ar] root=كتب expected=كتب ok=True
+استكتب [ar] root=كتب expected=كتب ok=True
+كتاب [context=book] first=A thing in which; on which, one writes; a book ok=True
+كتب [context=wrote] first=He wrote it; he asked; to dictate it ok=True
+学生 [context=student] first=student; schoolchild ok=True
+学生 [zh] ok=True gloss=True source=True senses=1
+  student; schoolchild  (CC-CEDICT (CC BY-SA 4.0))
+學生 [zh] ok=True gloss=True source=True senses=1
+  student; schoolchild  (CC-CEDICT (CC BY-SA 4.0))
+unknown_has_content=False
